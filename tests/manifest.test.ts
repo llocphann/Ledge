@@ -38,3 +38,14 @@ void test("release and repository documents exist", () => {
     /https:\/\/raw\.githubusercontent\.com\/llocphann\/Ledge\/main\/assets\/buy-me-a-coffee\.svg/,
   );
 });
+
+void test("support button is branded and independent from theme button classes", () => {
+  const source = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
+
+  assert.match(source, /cls: "ledge-support-link"/);
+  assert.doesNotMatch(source, /mod-cta ledge-support-link/);
+  assert.match(source, /cls: "ledge-support-link-label"/);
+  assert.match(styles, /--ledge-support-background: #fd0;/);
+  assert.match(styles, /\.ledge-support-link-label[\s\S]*white-space: nowrap;/);
+});

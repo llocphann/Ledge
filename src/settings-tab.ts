@@ -565,7 +565,7 @@ export class LedgeSettingTab extends PluginSettingTab {
           searchable: false,
           render: (setting) => {
             const link = setting.controlEl.createEl("a", {
-              cls: "mod-cta ledge-support-link",
+              cls: "ledge-support-link",
               attr: {
                 href: FUNDING_URL,
                 target: "_blank",
@@ -575,7 +575,7 @@ export class LedgeSettingTab extends PluginSettingTab {
             });
             const icon = link.createSpan({ cls: "ledge-support-link-icon" });
             setIcon(icon, "coffee");
-            link.createSpan({ text: "Buy me a coffee" });
+            link.createSpan({ cls: "ledge-support-link-label", text: "Buy me a coffee" });
           },
         },
       ],

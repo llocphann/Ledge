@@ -740,10 +740,14 @@
   --ledge-support-background: #fd0;
   --ledge-support-foreground: #000;
 
+  box-sizing: border-box;
+  width: max-content;
+  max-width: none;
   min-width: max-content;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   gap: var(--size-4-2);
   padding: var(--size-4-2) var(--size-4-3);
@@ -751,6 +755,7 @@
   border-radius: var(--button-radius, 5px);
   color: var(--ledge-support-foreground);
   background: var(--ledge-support-background);
+  background-image: none;
   box-shadow: var(--input-shadow);
   font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
@@ -766,12 +771,27 @@
   text-decoration: none;
 }
 
+.ledge-support-link:focus-visible {
+  outline: 2px solid var(--ledge-support-foreground);
+  outline-offset: 2px;
+}
+
+.ledge-support-link:active {
+  transform: translateY(1px);
+}
+
 .ledge-support-link-icon,
 .ledge-support-link-icon > svg {
   flex: 0 0 auto;
   width: var(--icon-s);
   height: var(--icon-s);
   display: block;
+}
+
+.ledge-support-link-label {
+  flex: 0 0 auto;
+  display: block;
+  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
