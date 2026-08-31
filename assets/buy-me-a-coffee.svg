@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="217" height="60" viewBox="0 0 217 60" role="img" aria-labelledby="title desc">
+  <title id="title">Buy me a coffee</title>
+  <desc id="desc">Yellow Buy Me a Coffee support button for llocphann</desc>
+  <rect width="217" height="60" rx="12" fill="#ffdd00"/>
+  <text x="19" y="40" fill="#000000" font-family="Cookie, cursive" font-size="28">☕</text>
+  <text x="57" y="38" fill="#000000" font-family="Cookie, ui-rounded, sans-serif" font-size="21" font-weight="700">Buy me a coffee</text>
+</svg>
