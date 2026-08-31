@@ -1,7 +1,7 @@
 {
   "id": "ledge",
   "name": "Ledge",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "minAppVersion": "1.13.7",
   "description": "Add a configurable edge dock with custom positions, icons, colors, reveal timing, and drag-and-drop ordering.",
   "author": "llocphann",

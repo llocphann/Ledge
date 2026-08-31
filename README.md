@@ -9,9 +9,9 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Configurable item size, icon size, gap, padding, radius, and edge offset.
 - Theme-aware, solid, and gradient surfaces.
 - Independent controls for the shared dock background and outer border.
-- Adjustable reveal delay, hide delay, trigger size, and motion duration.
-- Optional per-corner hot zones that reveal the dock without polling.
-- Independent hot-corner activation size, delay, enabled corners, background, border, radius, opacity, and theme/solid/gradient colors.
+- Adjustable trigger activation thickness, length, reveal delay, and hide delay.
+- Theme-aware, solid, and gradient trigger surfaces with independent visibility, thickness, opacity, radius, background, and border controls.
+- A transparent trigger mode that keeps the activation area usable without displaying a visual strip.
 - Optional macOS-style focused and neighboring item magnification.
 - Built-in Lucide icons or images stored inside the vault.
 - Per-item icon size, icon color, and tile gradient overrides.
@@ -19,7 +19,7 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Pointer drag-and-drop plus `Alt` + arrow keyboard reordering.
 - Same-leaf navigation that does not open an extra tab.
 - Pop-out window support with automatic lifecycle cleanup.
-- Tabbed settings for faster navigation between layout, behavior, hot corners, appearance, items, and support.
+- Tabbed settings for faster navigation between layout, behavior, trigger, appearance, items, and support.
 
 ## Configure Ledge
 
@@ -34,7 +34,7 @@ Every dock item has:
 
 For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
 
-Under **Hot corners**, enable any combination of the four root-pane corners. Resting the pointer inside an enabled corner reveals the dock after the configured activation delay. Hot corners work with auto-hide and use only pointer/focus events while idle.
+Under **Trigger**, configure the activation strip attached to the active root pane. Its pointer-sensitive thickness and length are independent from the visible strip, so the visual surface can be hidden without losing access to the dock. Background and border controls support the current theme, a solid color, or a custom gradient.
 
 ## Install manually
 

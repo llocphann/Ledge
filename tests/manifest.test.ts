@@ -49,3 +49,18 @@ void test("support button is branded and independent from theme button classes",
   assert.match(styles, /--ledge-support-background: #fd0;/);
   assert.match(styles, /\.ledge-support-link-label[\s\S]*white-space: nowrap;/);
 });
+
+void test("edge trigger replaces the removed hot-corner interface", () => {
+  const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const settingsTab = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
+  const readme = fs.readFileSync("README.md", "utf8");
+
+  assert.doesNotMatch(dock, /hotCorner|ledge-hot-corner/);
+  assert.doesNotMatch(settingsTab, /hotCorner|Hot corners|hot-corners/);
+  assert.doesNotMatch(styles, /ledge-hot-corner|hot-corners/);
+  assert.doesNotMatch(readme, /Hot corners|hot-corner/);
+  assert.match(settingsTab, /heading: "Edge trigger"/);
+  assert.match(settingsTab, /"Activation length"[\s\S]*"triggerLength"/);
+  assert.match(styles, /--ledge-trigger-surface-thickness/);
+});

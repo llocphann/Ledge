@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-- Add event-driven, independently selectable hot corners that reveal the dock.
-- Add activation size and delay controls plus theme, solid, gradient, opacity, border, and radius options for hot corners.
+## 1.0.0
+
+- Replace the experimental Hot Corners interface with a dedicated edge-trigger settings tab.
+- Add independent activation thickness, activation length, visible thickness, reveal delay, and hide delay controls.
+- Add theme, solid, and gradient trigger surfaces with opacity, radius, background, and border controls.
+- Allow the trigger surface to be hidden while retaining its transparent activation area.
+- Migrate legacy Hot Corners appearance values to the corresponding edge-trigger settings and remove obsolete keys.
 - Keep the Buy Me a Coffee settings button on one yellow line and use Community-compatible Markdown in the README.
+- Validate the complete Community Plugins release bundle at version 1.0.0.
 
 ## 0.1.0
 

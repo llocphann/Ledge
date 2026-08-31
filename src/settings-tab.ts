@@ -28,7 +28,7 @@ const FUNDING_URL = "https://www.buymeacoffee.com/llocphann";
 const SETTINGS_TABS = [
   { id: "layout", label: "Layout", icon: "layout-dashboard" },
   { id: "behavior", label: "Behavior", icon: "timer" },
-  { id: "hot-corners", label: "Hot corners", icon: "scan" },
+  { id: "trigger", label: "Trigger", icon: "mouse-pointer-2" },
   { id: "appearance", label: "Appearance", icon: "palette" },
   { id: "items", label: "Items", icon: "list" },
   { id: "about", label: "About", icon: "info" },
@@ -49,7 +49,7 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.tabNavigationDefinitions(),
       this.layoutDefinitions(),
       this.behaviorDefinitions(),
-      this.hotCornerDefinitions(),
+      this.triggerDefinitions(),
       this.appearanceDefinitions(),
       this.itemDefinitions(),
       this.aboutDefinitions(),
@@ -70,8 +70,8 @@ export class LedgeSettingTab extends PluginSettingTab {
 
     if (key === "accentColorEnabled") return Boolean(this.ledge.settings.accentColor);
     if (key === "borderColorEnabled") return Boolean(this.ledge.settings.borderColor);
-    if (key === "hotCornerBorderColorEnabled") {
-      return Boolean(this.ledge.settings.hotCornerBorderColor);
+    if (key === "triggerBorderColorEnabled") {
+      return Boolean(this.ledge.settings.triggerBorderColor);
     }
     return this.ledge.settings[key as keyof LedgeSettings];
   }
@@ -93,8 +93,8 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.ledge.settings.accentColor = value === true ? "#7dd3fc" : "";
     } else if (key === "borderColorEnabled") {
       this.ledge.settings.borderColor = value === true ? "#64748b" : "";
-    } else if (key === "hotCornerBorderColorEnabled") {
-      this.ledge.settings.hotCornerBorderColor = value === true ? "#64748b" : "";
+    } else if (key === "triggerBorderColorEnabled") {
+      this.ledge.settings.triggerBorderColor = value === true ? "#64748b" : "";
     } else {
       this.setGlobalValue(key, value);
     }
@@ -105,11 +105,11 @@ export class LedgeSettingTab extends PluginSettingTab {
       "showDockBackground",
       "showDockBorder",
       "surfaceMode",
-      "hotCornersEnabled",
-      "hotCornerShowBackground",
-      "hotCornerShowBorder",
-      "hotCornerSurfaceMode",
-      "hotCornerBorderColorEnabled",
+      "showTrigger",
+      "triggerShowBackground",
+      "triggerShowBorder",
+      "triggerSurfaceMode",
+      "triggerBorderColorEnabled",
       "accentColorEnabled",
       "borderColorEnabled",
     ].includes(key)) {
@@ -228,18 +228,6 @@ export class LedgeSettingTab extends PluginSettingTab {
           desc: "Keep only a small edge trigger visible until the dock is hovered or focused.",
           control: { type: "toggle", key: "autoHide" },
         },
-        {
-          ...this.slider("Reveal delay", "Time spent hovering the edge before the dock appears.", "revealDelay", 0, 3000, 25, "ms"),
-          visible: () => this.ledge.settings.autoHide,
-        },
-        {
-          ...this.slider("Hide delay", "How long the dock remains visible after the pointer leaves.", "hideDelay", 0, 10000, 50, "ms"),
-          visible: () => this.ledge.settings.autoHide,
-        },
-        {
-          ...this.slider("Trigger size", "Thickness of the edge activation area.", "triggerSize", 4, 48, 1, "px"),
-          visible: () => this.ledge.settings.autoHide,
-        },
         this.slider("Motion duration", "Duration of reveal, hide, and magnification transitions.", "motionDuration", 0, 1000, 10, "ms"),
         {
           name: "Magnification",
@@ -263,50 +251,37 @@ export class LedgeSettingTab extends PluginSettingTab {
     };
   }
 
-  private hotCornerDefinitions(): SettingDefinitionItem {
-    const enabled = (): boolean => this.ledge.settings.hotCornersEnabled;
-    const backgroundVisible = (): boolean => enabled()
-      && this.ledge.settings.hotCornerShowBackground;
-    const borderVisible = (): boolean => enabled()
-      && this.ledge.settings.hotCornerShowBorder;
+  private triggerDefinitions(): SettingDefinitionItem {
+    const enabled = (): boolean => this.ledge.settings.autoHide;
+    const surfaceVisible = (): boolean => enabled() && this.ledge.settings.showTrigger;
+    const backgroundVisible = (): boolean => surfaceVisible()
+      && this.ledge.settings.triggerShowBackground;
+    const borderVisible = (): boolean => surfaceVisible()
+      && this.ledge.settings.triggerShowBorder;
 
     return {
       type: "group",
-      heading: "Hot corners",
-      cls: "ledge-settings-panel-hot-corners",
+      heading: "Edge trigger",
+      cls: "ledge-settings-panel-trigger",
       items: [
         {
-          name: "Enable hot corners",
-          desc: "Reveal the dock by resting the pointer in any enabled root-pane corner. Hot corners are active while auto-hide is enabled.",
-          control: { type: "toggle", key: "hotCornersEnabled" },
+          name: "Edge trigger",
+          desc: "This activation strip stays attached to the active root pane. It is used only while auto-hide is enabled.",
+          searchable: false,
         },
         {
-          name: "Top-left corner",
-          control: { type: "toggle", key: "hotCornerTopLeftEnabled" },
-          visible: enabled,
-        },
-        {
-          name: "Top-right corner",
-          control: { type: "toggle", key: "hotCornerTopRightEnabled" },
-          visible: enabled,
-        },
-        {
-          name: "Bottom-left corner",
-          control: { type: "toggle", key: "hotCornerBottomLeftEnabled" },
-          visible: enabled,
-        },
-        {
-          name: "Bottom-right corner",
-          control: { type: "toggle", key: "hotCornerBottomRightEnabled" },
+          name: "Show trigger surface",
+          desc: "Hide only the visible indicator. The transparent activation area remains available so the dock can still be revealed.",
+          control: { type: "toggle", key: "showTrigger" },
           visible: enabled,
         },
         {
           ...this.slider(
-            "Activation size",
-            "Width and height of each corner activation area.",
-            "hotCornerActivationSize",
-            8,
-            128,
+            "Activation thickness",
+            "Thickness of the pointer-sensitive area along the pane edge.",
+            "triggerSize",
+            4,
+            64,
             1,
             "px",
           ),
@@ -314,9 +289,21 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           ...this.slider(
-            "Activation delay",
-            "How long the pointer must remain in a hot corner before the dock appears.",
-            "hotCornerRevealDelay",
+            "Activation length",
+            "Length of the pointer-sensitive area along a straight pane edge.",
+            "triggerLength",
+            24,
+            360,
+            2,
+            "px",
+          ),
+          visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Reveal delay",
+            "Time spent hovering the trigger before the dock appears.",
+            "revealDelay",
             0,
             3000,
             25,
@@ -325,17 +312,41 @@ export class LedgeSettingTab extends PluginSettingTab {
           visible: enabled,
         },
         {
-          name: "Show background",
-          desc: "Display a visible surface inside enabled hot corners. The activation areas still work when hidden.",
-          control: { type: "toggle", key: "hotCornerShowBackground" },
+          ...this.slider(
+            "Hide delay",
+            "How long the dock remains visible after the pointer leaves.",
+            "hideDelay",
+            0,
+            10000,
+            50,
+            "ms",
+          ),
           visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Surface thickness",
+            "Thickness of the visible strip inside the larger activation area.",
+            "triggerSurfaceThickness",
+            1,
+            48,
+            1,
+            "px",
+          ),
+          visible: surfaceVisible,
+        },
+        {
+          name: "Show background",
+          desc: "Draw a surface inside the trigger. The activation area still works when this is off.",
+          control: { type: "toggle", key: "triggerShowBackground" },
+          visible: surfaceVisible,
         },
         {
           name: "Background style",
           desc: "Theme follows the active Obsidian palette. Solid and gradient use the colors below.",
           control: {
             type: "dropdown",
-            key: "hotCornerSurfaceMode",
+            key: "triggerSurfaceMode",
             options: {
               theme: "Theme palette",
               solid: "Solid color",
@@ -347,8 +358,8 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Background opacity",
-            "Opacity of the corner surface without reducing its activation area.",
-            "hotCornerSurfaceOpacity",
+            "Opacity of the visible surface without reducing the activation area.",
+            "triggerSurfaceOpacity",
             0,
             100,
             1,
@@ -358,58 +369,58 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Solid color",
-          control: { type: "color", key: "hotCornerSurfaceColor" },
+          control: { type: "color", key: "triggerSurfaceColor" },
           visible: () => backgroundVisible()
-            && this.ledge.settings.hotCornerSurfaceMode === "solid",
+            && this.ledge.settings.triggerSurfaceMode === "solid",
         },
         {
           name: "Gradient start",
-          control: { type: "color", key: "hotCornerGradientStart" },
+          control: { type: "color", key: "triggerGradientStart" },
           visible: () => backgroundVisible()
-            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+            && this.ledge.settings.triggerSurfaceMode === "gradient",
         },
         {
           name: "Gradient end",
-          control: { type: "color", key: "hotCornerGradientEnd" },
+          control: { type: "color", key: "triggerGradientEnd" },
           visible: () => backgroundVisible()
-            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+            && this.ledge.settings.triggerSurfaceMode === "gradient",
         },
         {
           ...this.slider(
             "Gradient angle",
-            "Direction of the hot-corner gradient.",
-            "hotCornerGradientAngle",
+            "Direction of the trigger gradient.",
+            "triggerGradientAngle",
             0,
             360,
             1,
             "°",
           ),
           visible: () => backgroundVisible()
-            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+            && this.ledge.settings.triggerSurfaceMode === "gradient",
         },
         {
           ...this.slider(
-            "Inner radius",
-            "Round the edge facing into the pane. A larger value creates a quarter-circle shape.",
-            "hotCornerRadius",
+            "Corner radius",
+            "Rounding of the visible trigger strip.",
+            "triggerRadius",
             0,
-            128,
+            40,
             1,
             "px",
           ),
-          visible: enabled,
+          visible: surfaceVisible,
         },
         {
           name: "Show border",
-          desc: "Draw an outline around the visible hot-corner surface.",
-          control: { type: "toggle", key: "hotCornerShowBorder" },
-          visible: enabled,
+          desc: "Draw an outline around the visible trigger strip.",
+          control: { type: "toggle", key: "triggerShowBorder" },
+          visible: surfaceVisible,
         },
         {
           ...this.slider(
             "Border width",
-            "Thickness of the hot-corner outline.",
-            "hotCornerBorderWidth",
+            "Thickness of the trigger outline.",
+            "triggerBorderWidth",
             0,
             6,
             1,
@@ -420,14 +431,14 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           name: "Custom border color",
           desc: "Disable this option to use the active theme border color.",
-          control: { type: "toggle", key: "hotCornerBorderColorEnabled" },
+          control: { type: "toggle", key: "triggerBorderColorEnabled" },
           visible: borderVisible,
         },
         {
           name: "Border color",
-          control: { type: "color", key: "hotCornerBorderColor" },
+          control: { type: "color", key: "triggerBorderColor" },
           visible: () => borderVisible()
-            && Boolean(this.ledge.settings.hotCornerBorderColor),
+            && Boolean(this.ledge.settings.triggerBorderColor),
         },
       ],
     };
@@ -755,33 +766,28 @@ export class LedgeSettingTab extends PluginSettingTab {
       "magnification",
       "showDockBackground",
       "showDockBorder",
-      "hotCornersEnabled",
-      "hotCornerTopLeftEnabled",
-      "hotCornerTopRightEnabled",
-      "hotCornerBottomLeftEnabled",
-      "hotCornerBottomRightEnabled",
-      "hotCornerShowBackground",
-      "hotCornerShowBorder",
+      "showTrigger",
+      "triggerShowBackground",
+      "triggerShowBorder",
     ].includes(key)) {
       settings[key as "enabled"] = value === true;
     } else if (key === "position") {
       settings.position = value as DockPosition;
     } else if (key === "surfaceMode") {
       settings.surfaceMode = value as SurfaceMode;
-    } else if (key === "hotCornerSurfaceMode") {
-      settings.hotCornerSurfaceMode = value as SurfaceMode;
+    } else if (key === "triggerSurfaceMode") {
+      settings.triggerSurfaceMode = value as SurfaceMode;
     } else if ([
       "itemSize", "iconSize", "gap", "padding", "radius", "edgeOffset", "triggerSize",
       "revealDelay", "hideDelay", "motionDuration", "magnificationScale", "neighborScale",
-      "surfaceOpacity", "gradientAngle", "hotCornerActivationSize", "hotCornerRevealDelay",
-      "hotCornerSurfaceOpacity", "hotCornerGradientAngle", "hotCornerRadius",
-      "hotCornerBorderWidth",
+      "surfaceOpacity", "gradientAngle", "triggerLength", "triggerSurfaceThickness",
+      "triggerSurfaceOpacity", "triggerGradientAngle", "triggerRadius", "triggerBorderWidth",
     ].includes(key)) {
       settings[key as "itemSize"] = Number(value);
     } else if ([
       "surfaceColor", "gradientStart", "gradientEnd", "accentColor", "borderColor",
-      "hotCornerSurfaceColor", "hotCornerGradientStart", "hotCornerGradientEnd",
-      "hotCornerBorderColor",
+      "triggerSurfaceColor", "triggerGradientStart", "triggerGradientEnd",
+      "triggerBorderColor",
     ].includes(key)) {
       settings[key as "surfaceColor"] = typeof value === "string" ? value : "";
     }

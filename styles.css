@@ -6,14 +6,14 @@
   --ledge-padding: 8px;
   --ledge-radius: 18px;
   --ledge-trigger-size: 14px;
-  --ledge-hot-corner-size: 36px;
-  --ledge-hot-corner-opacity: 72%;
-  --ledge-hot-corner-angle: 145deg;
-  --ledge-hot-corner-radius: 28px;
-  --ledge-hot-corner-border-width: 1px;
-  --ledge-hot-corner-start: var(--interactive-accent);
-  --ledge-hot-corner-end: var(--background-secondary);
-  --ledge-hot-corner-border-color: var(--background-modifier-border-hover);
+  --ledge-trigger-surface-thickness: 5px;
+  --ledge-trigger-opacity: 72%;
+  --ledge-trigger-angle: 145deg;
+  --ledge-trigger-radius: 12px;
+  --ledge-trigger-border-width: 1px;
+  --ledge-trigger-start: var(--interactive-accent);
+  --ledge-trigger-end: var(--background-secondary);
+  --ledge-trigger-border-color: var(--background-modifier-border-hover);
   --ledge-motion-duration: 220ms;
   --ledge-magnification: 1.35;
   --ledge-neighbor-scale: 1.14;
@@ -57,25 +57,39 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  opacity: .46;
   pointer-events: auto;
-  transition: opacity var(--ledge-motion-duration) ease;
 }
 
 .ledge-dock-trigger::before {
   content: "";
   position: absolute;
-  border: 1px solid color-mix(in srgb, var(--ledge-accent) 48%, transparent);
-  background: color-mix(in srgb, var(--ledge-accent) 30%, transparent);
+  border: var(--ledge-trigger-border-width) solid
+    color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent);
+  background:
+    linear-gradient(
+      var(--ledge-trigger-angle),
+      color-mix(in srgb, var(--ledge-trigger-start) var(--ledge-trigger-opacity), transparent),
+      color-mix(in srgb, var(--ledge-trigger-end) var(--ledge-trigger-opacity), transparent)
+    );
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--text-normal) 9%, transparent),
+    0 5px 18px color-mix(in srgb, var(--background-primary) 54%, transparent);
+  backdrop-filter: blur(10px) saturate(1.08);
+  opacity: .72;
   transition:
-    background-color var(--ledge-motion-duration) ease,
+    filter var(--ledge-motion-duration) ease,
+    box-shadow var(--ledge-motion-duration) ease,
     opacity var(--ledge-motion-duration) ease;
 }
 
-.ledge-dock-trigger:hover,
-.ledge-dock-trigger:focus-visible,
-.ledge-dock-trigger.is-visible {
-  opacity: .9;
+.ledge-dock-trigger:hover::before,
+.ledge-dock-trigger:focus-visible::before,
+.ledge-dock-trigger.is-visible::before {
+  filter: brightness(1.14);
+  opacity: 1;
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),
+    0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);
 }
 
 .ledge-dock-trigger:focus-visible {
@@ -83,84 +97,17 @@
   outline-offset: -2px;
 }
 
-.ledge-hot-corner {
-  position: fixed;
-  z-index: 1;
-  width: var(--ledge-hot-corner-size);
-  height: var(--ledge-hot-corner-size);
-  min-width: 0;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  appearance: none;
-  border: var(--ledge-hot-corner-border-width) solid
-    color-mix(in srgb, var(--ledge-hot-corner-border-color) 82%, transparent);
-  background:
-    linear-gradient(
-      var(--ledge-hot-corner-angle),
-      color-mix(
-        in srgb,
-        var(--ledge-hot-corner-start) var(--ledge-hot-corner-opacity),
-        transparent
-      ),
-      color-mix(
-        in srgb,
-        var(--ledge-hot-corner-end) var(--ledge-hot-corner-opacity),
-        transparent
-      )
-    );
-  box-shadow:
-    inset 0 1px color-mix(in srgb, var(--text-normal) 9%, transparent),
-    0 5px 18px color-mix(in srgb, var(--background-primary) 54%, transparent);
-  backdrop-filter: blur(10px) saturate(1.08);
-  pointer-events: auto;
-  cursor: default;
-  transition:
-    filter var(--ledge-motion-duration) ease,
-    box-shadow var(--ledge-motion-duration) ease;
+.ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before {
+  opacity: 0;
 }
 
-.ledge-hot-corner[hidden] {
-  display: none;
-}
-
-.ledge-hot-corner[data-hot-corner="top-left"] {
-  border-radius: 0 0 var(--ledge-hot-corner-radius) 0;
-}
-
-.ledge-hot-corner[data-hot-corner="top-right"] {
-  border-radius: 0 0 0 var(--ledge-hot-corner-radius);
-}
-
-.ledge-hot-corner[data-hot-corner="bottom-left"] {
-  border-radius: 0 var(--ledge-hot-corner-radius) 0 0;
-}
-
-.ledge-hot-corner[data-hot-corner="bottom-right"] {
-  border-radius: var(--ledge-hot-corner-radius) 0 0 0;
-}
-
-.ledge-hot-corner:hover,
-.ledge-hot-corner:focus-visible,
-.ledge-hot-corner[aria-expanded="true"] {
-  filter: brightness(1.14);
-  box-shadow:
-    inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),
-    0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);
-}
-
-.ledge-hot-corner:focus-visible {
-  outline: 2px solid var(--ledge-accent);
-  outline-offset: -3px;
-}
-
-.ledge-dock-root.is-hot-corner-background-hidden .ledge-hot-corner {
+.ledge-dock-root.is-trigger-background-hidden .ledge-dock-trigger::before {
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
 }
 
-.ledge-dock-root.is-hot-corner-border-hidden .ledge-hot-corner {
+.ledge-dock-root.is-trigger-border-hidden .ledge-dock-trigger::before {
   border-color: transparent;
 }
 
@@ -168,43 +115,43 @@
 .ledge-dock-root[data-position="right"] .ledge-dock-trigger::before {
   top: 10%;
   bottom: 10%;
-  width: max(3px, calc(var(--ledge-trigger-size) * .36));
+  width: min(100%, var(--ledge-trigger-surface-thickness));
 }
 
 .ledge-dock-root[data-position="left"] .ledge-dock-trigger::before {
   left: 0;
   border-left: 0;
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0;
 }
 
 .ledge-dock-root[data-position="right"] .ledge-dock-trigger::before {
   right: 0;
   border-right: 0;
-  border-radius: 999px 0 0 999px;
+  border-radius: var(--ledge-trigger-radius) 0 0 var(--ledge-trigger-radius);
 }
 
 .ledge-dock-root[data-position="top"] .ledge-dock-trigger::before,
 .ledge-dock-root[data-position="bottom"] .ledge-dock-trigger::before {
   right: 10%;
   left: 10%;
-  height: max(3px, calc(var(--ledge-trigger-size) * .36));
+  height: min(100%, var(--ledge-trigger-surface-thickness));
 }
 
 .ledge-dock-root[data-position="top"] .ledge-dock-trigger::before {
   top: 0;
   border-top: 0;
-  border-radius: 0 0 999px 999px;
+  border-radius: 0 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius);
 }
 
 .ledge-dock-root[data-position="bottom"] .ledge-dock-trigger::before {
   bottom: 0;
   border-bottom: 0;
-  border-radius: 999px 999px 0 0;
+  border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
 }
 
 .ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {
-  width: 54%;
-  height: 54%;
+  width: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
+  height: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
 }
 
 .ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
@@ -212,7 +159,7 @@
   left: 0;
   border-top: 0;
   border-left: 0;
-  border-radius: 0 0 999px 0;
+  border-radius: 0 0 var(--ledge-trigger-radius) 0;
 }
 
 .ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
@@ -220,7 +167,7 @@
   right: 0;
   border-top: 0;
   border-right: 0;
-  border-radius: 0 0 0 999px;
+  border-radius: 0 0 0 var(--ledge-trigger-radius);
 }
 
 .ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
@@ -228,7 +175,7 @@
   left: 0;
   border-bottom: 0;
   border-left: 0;
-  border-radius: 0 999px 0 0;
+  border-radius: 0 var(--ledge-trigger-radius) 0 0;
 }
 
 .ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
@@ -236,7 +183,7 @@
   bottom: 0;
   border-right: 0;
   border-bottom: 0;
-  border-radius: 999px 0 0 0;
+  border-radius: var(--ledge-trigger-radius) 0 0 0;
 }
 
 .ledge-dock-panel {
@@ -729,7 +676,7 @@
 
 .ledge-settings-root:not([data-ledge-settings-tab="layout"]) .ledge-settings-panel-layout,
 .ledge-settings-root:not([data-ledge-settings-tab="behavior"]) .ledge-settings-panel-behavior,
-.ledge-settings-root:not([data-ledge-settings-tab="hot-corners"]) .ledge-settings-panel-hot-corners,
+.ledge-settings-root:not([data-ledge-settings-tab="trigger"]) .ledge-settings-panel-trigger,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
 .ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
 .ledge-settings-root:not([data-ledge-settings-tab="about"]) .ledge-settings-panel-about {
@@ -796,7 +743,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ledge-dock-trigger,
-  .ledge-hot-corner,
   .ledge-dock-panel,
   .ledge-dock-item,
   .ledge-dock-label {

@@ -1,6 +1,6 @@
 {
   "name": "ledge-obsidian-plugin",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A configurable edge dock for Obsidian workspaces.",
   "main": "main.js",
   "private": true,

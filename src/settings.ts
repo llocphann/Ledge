@@ -11,6 +11,22 @@ import {
   type SurfaceMode,
 } from "./types";
 
+interface LegacyHotCornerSettings {
+  hotCornerShowBackground?: unknown;
+  hotCornerShowBorder?: unknown;
+  hotCornerSurfaceMode?: unknown;
+  hotCornerSurfaceOpacity?: unknown;
+  hotCornerSurfaceColor?: unknown;
+  hotCornerGradientStart?: unknown;
+  hotCornerGradientEnd?: unknown;
+  hotCornerGradientAngle?: unknown;
+  hotCornerRadius?: unknown;
+  hotCornerBorderWidth?: unknown;
+  hotCornerBorderColor?: unknown;
+}
+
+type SettingsInput = Partial<LedgeSettings> & LegacyHotCornerSettings;
+
 const DEFAULT_ITEMS: DockItemSettings[] = [
   dockItem("finance", "Finance", "Finance_Dashboard.md", "landmark"),
   dockItem("contacts", "Contacts", "Contact_Tracker.base", "contact"),
@@ -35,27 +51,23 @@ export const DEFAULT_SETTINGS: LedgeSettings = {
   padding: 8,
   radius: 18,
   edgeOffset: 0,
+  showTrigger: true,
   triggerSize: 14,
+  triggerLength: 86,
+  triggerSurfaceThickness: 5,
+  triggerShowBackground: true,
+  triggerShowBorder: true,
+  triggerSurfaceMode: "theme",
+  triggerSurfaceOpacity: 72,
+  triggerSurfaceColor: "#1f2937",
+  triggerGradientStart: "#334155",
+  triggerGradientEnd: "#111827",
+  triggerGradientAngle: 145,
+  triggerRadius: 12,
+  triggerBorderWidth: 1,
+  triggerBorderColor: "",
   revealDelay: 120,
   hideDelay: 650,
-  hotCornersEnabled: false,
-  hotCornerTopLeftEnabled: true,
-  hotCornerTopRightEnabled: false,
-  hotCornerBottomLeftEnabled: false,
-  hotCornerBottomRightEnabled: false,
-  hotCornerActivationSize: 36,
-  hotCornerRevealDelay: 120,
-  hotCornerShowBackground: true,
-  hotCornerShowBorder: true,
-  hotCornerSurfaceMode: "theme",
-  hotCornerSurfaceOpacity: 72,
-  hotCornerSurfaceColor: "#1f2937",
-  hotCornerGradientStart: "#334155",
-  hotCornerGradientEnd: "#111827",
-  hotCornerGradientAngle: 145,
-  hotCornerRadius: 28,
-  hotCornerBorderWidth: 1,
-  hotCornerBorderColor: "",
   motionDuration: 220,
   magnification: true,
   magnificationScale: 1.35,
@@ -140,7 +152,7 @@ function normalizeItem(value: unknown, index: number, usedIds: Set<string>): Doc
 }
 
 export function normalizeSettings(value: unknown): LedgeSettings {
-  const source = value && typeof value === "object" ? value as Partial<LedgeSettings> : {};
+  const source = value && typeof value === "object" ? value as SettingsInput : {};
   const usedIds = new Set<string>();
   const inputItems = Array.isArray(source.items) ? source.items.slice(0, 48) : cloneDefaultItems();
   const items = inputItems
@@ -162,98 +174,74 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     padding: clamp(source.padding, DEFAULT_SETTINGS.padding, 0, 32),
     radius: clamp(source.radius, DEFAULT_SETTINGS.radius, 0, 40),
     edgeOffset: clamp(source.edgeOffset, DEFAULT_SETTINGS.edgeOffset, 0, 160),
-    triggerSize: clamp(source.triggerSize, DEFAULT_SETTINGS.triggerSize, 4, 48),
-    revealDelay: clamp(source.revealDelay, DEFAULT_SETTINGS.revealDelay, 0, 3000),
-    hideDelay: clamp(source.hideDelay, DEFAULT_SETTINGS.hideDelay, 0, 10000),
-    hotCornersEnabled: booleanValue(
-      source.hotCornersEnabled,
-      DEFAULT_SETTINGS.hotCornersEnabled,
+    showTrigger: booleanValue(source.showTrigger, DEFAULT_SETTINGS.showTrigger),
+    triggerSize: clamp(source.triggerSize, DEFAULT_SETTINGS.triggerSize, 4, 64),
+    triggerLength: clamp(source.triggerLength, DEFAULT_SETTINGS.triggerLength, 24, 360),
+    triggerSurfaceThickness: clamp(
+      source.triggerSurfaceThickness,
+      DEFAULT_SETTINGS.triggerSurfaceThickness,
+      1,
+      48,
     ),
-    hotCornerTopLeftEnabled: booleanValue(
-      source.hotCornerTopLeftEnabled,
-      DEFAULT_SETTINGS.hotCornerTopLeftEnabled,
+    triggerShowBackground: booleanValue(
+      source.triggerShowBackground ?? source.hotCornerShowBackground,
+      DEFAULT_SETTINGS.triggerShowBackground,
     ),
-    hotCornerTopRightEnabled: booleanValue(
-      source.hotCornerTopRightEnabled,
-      DEFAULT_SETTINGS.hotCornerTopRightEnabled,
+    triggerShowBorder: booleanValue(
+      source.triggerShowBorder ?? source.hotCornerShowBorder,
+      DEFAULT_SETTINGS.triggerShowBorder,
     ),
-    hotCornerBottomLeftEnabled: booleanValue(
-      source.hotCornerBottomLeftEnabled,
-      DEFAULT_SETTINGS.hotCornerBottomLeftEnabled,
-    ),
-    hotCornerBottomRightEnabled: booleanValue(
-      source.hotCornerBottomRightEnabled,
-      DEFAULT_SETTINGS.hotCornerBottomRightEnabled,
-    ),
-    hotCornerActivationSize: clamp(
-      source.hotCornerActivationSize,
-      DEFAULT_SETTINGS.hotCornerActivationSize,
-      8,
-      128,
-    ),
-    hotCornerRevealDelay: clamp(
-      source.hotCornerRevealDelay,
-      DEFAULT_SETTINGS.hotCornerRevealDelay,
-      0,
-      3000,
-    ),
-    hotCornerShowBackground: booleanValue(
-      source.hotCornerShowBackground,
-      DEFAULT_SETTINGS.hotCornerShowBackground,
-    ),
-    hotCornerShowBorder: booleanValue(
-      source.hotCornerShowBorder,
-      DEFAULT_SETTINGS.hotCornerShowBorder,
-    ),
-    hotCornerSurfaceMode: enumValue<SurfaceMode>(
-      source.hotCornerSurfaceMode,
+    triggerSurfaceMode: enumValue<SurfaceMode>(
+      source.triggerSurfaceMode ?? source.hotCornerSurfaceMode,
       SURFACE_MODES,
-      DEFAULT_SETTINGS.hotCornerSurfaceMode,
+      DEFAULT_SETTINGS.triggerSurfaceMode,
     ),
-    hotCornerSurfaceOpacity: clamp(
-      source.hotCornerSurfaceOpacity,
-      DEFAULT_SETTINGS.hotCornerSurfaceOpacity,
+    triggerSurfaceOpacity: clamp(
+      source.triggerSurfaceOpacity ?? source.hotCornerSurfaceOpacity,
+      DEFAULT_SETTINGS.triggerSurfaceOpacity,
       0,
       100,
     ),
-    hotCornerSurfaceColor: stringValue(
-      source.hotCornerSurfaceColor,
-      DEFAULT_SETTINGS.hotCornerSurfaceColor,
+    triggerSurfaceColor: stringValue(
+      source.triggerSurfaceColor ?? source.hotCornerSurfaceColor,
+      DEFAULT_SETTINGS.triggerSurfaceColor,
       120,
     ),
-    hotCornerGradientStart: stringValue(
-      source.hotCornerGradientStart,
-      DEFAULT_SETTINGS.hotCornerGradientStart,
+    triggerGradientStart: stringValue(
+      source.triggerGradientStart ?? source.hotCornerGradientStart,
+      DEFAULT_SETTINGS.triggerGradientStart,
       120,
     ),
-    hotCornerGradientEnd: stringValue(
-      source.hotCornerGradientEnd,
-      DEFAULT_SETTINGS.hotCornerGradientEnd,
+    triggerGradientEnd: stringValue(
+      source.triggerGradientEnd ?? source.hotCornerGradientEnd,
+      DEFAULT_SETTINGS.triggerGradientEnd,
       120,
     ),
-    hotCornerGradientAngle: clamp(
-      source.hotCornerGradientAngle,
-      DEFAULT_SETTINGS.hotCornerGradientAngle,
+    triggerGradientAngle: clamp(
+      source.triggerGradientAngle ?? source.hotCornerGradientAngle,
+      DEFAULT_SETTINGS.triggerGradientAngle,
       0,
       360,
     ),
-    hotCornerRadius: clamp(
-      source.hotCornerRadius,
-      DEFAULT_SETTINGS.hotCornerRadius,
+    triggerRadius: clamp(
+      source.triggerRadius ?? source.hotCornerRadius,
+      DEFAULT_SETTINGS.triggerRadius,
       0,
-      128,
+      40,
     ),
-    hotCornerBorderWidth: clamp(
-      source.hotCornerBorderWidth,
-      DEFAULT_SETTINGS.hotCornerBorderWidth,
+    triggerBorderWidth: clamp(
+      source.triggerBorderWidth ?? source.hotCornerBorderWidth,
+      DEFAULT_SETTINGS.triggerBorderWidth,
       0,
       6,
     ),
-    hotCornerBorderColor: stringValue(
-      source.hotCornerBorderColor,
-      DEFAULT_SETTINGS.hotCornerBorderColor,
+    triggerBorderColor: stringValue(
+      source.triggerBorderColor ?? source.hotCornerBorderColor,
+      DEFAULT_SETTINGS.triggerBorderColor,
       120,
     ),
+    revealDelay: clamp(source.revealDelay, DEFAULT_SETTINGS.revealDelay, 0, 3000),
+    hideDelay: clamp(source.hideDelay, DEFAULT_SETTINGS.hideDelay, 0, 10000),
     motionDuration: clamp(source.motionDuration, DEFAULT_SETTINGS.motionDuration, 0, 1000),
     magnification: booleanValue(source.magnification, DEFAULT_SETTINGS.magnification),
     magnificationScale: clamp(source.magnificationScale, DEFAULT_SETTINGS.magnificationScale, 1, 2),
@@ -273,6 +261,11 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     borderColor: stringValue(source.borderColor, DEFAULT_SETTINGS.borderColor, 120),
     items,
   };
+}
+
+export function hasLegacyHotCornerSettings(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  return Object.keys(value).some((key) => key === "hotCornersEnabled" || key.startsWith("hotCorner"));
 }
 
 export function createDockItem(existingItems: DockItemSettings[]): DockItemSettings {

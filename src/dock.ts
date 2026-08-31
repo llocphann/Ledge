@@ -9,11 +9,9 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { computeCornerLayout, isCornerPosition, isVerticalPosition } from "./layout";
-import { HOT_CORNER_POSITIONS } from "./types";
 import type {
   DockItemSettings,
   DockPosition,
-  HotCornerPosition,
   LedgeSettings,
 } from "./types";
 
@@ -30,13 +28,6 @@ interface DragState {
   startY: number;
   moved: boolean;
 }
-
-const HOT_CORNER_SETTING_KEYS: Record<HotCornerPosition, keyof LedgeSettings> = {
-  "top-left": "hotCornerTopLeftEnabled",
-  "top-right": "hotCornerTopRightEnabled",
-  "bottom-left": "hotCornerBottomLeftEnabled",
-  "bottom-right": "hotCornerBottomRightEnabled",
-};
 
 export class DockController extends Component {
   private readonly instances = new Map<Document, DockInstance>();
@@ -180,7 +171,6 @@ export class DockController extends Component {
 class DockInstance extends Component {
   private root!: HTMLDivElement;
   private trigger!: HTMLButtonElement;
-  private readonly hotCorners = new Map<HotCornerPosition, HTMLButtonElement>();
   private panel!: HTMLElement;
   private showTimer: number | null = null;
   private hideTimer: number | null = null;
@@ -205,20 +195,10 @@ class DockInstance extends Component {
     this.trigger.setAttribute("aria-label", "Reveal dock");
     this.trigger.setAttribute("aria-expanded", "false");
 
-    for (const position of HOT_CORNER_POSITIONS) {
-      const corner = this.root.createEl("button", { cls: "ledge-hot-corner" });
-      corner.type = "button";
-      corner.dataset.hotCorner = position;
-      corner.setAttribute("aria-label", `Reveal dock from ${position.replace("-", " ")} corner`);
-      corner.setAttribute("aria-expanded", "false");
-      this.hotCorners.set(position, corner);
-    }
-
     this.panel = this.root.createEl("nav", { cls: "ledge-dock-panel" });
     this.panel.setAttribute("aria-label", "Vault navigation");
 
     this.bindRevealBehavior();
-    this.bindHotCornerBehavior();
     this.bindDockInteraction();
     const view = this.document.defaultView;
     if (view) this.registerDomEvent(view, "resize", () => this.refreshGeometryAndActiveState());
@@ -244,16 +224,9 @@ class DockInstance extends Component {
     this.root.classList.toggle("is-magnification-disabled", !settings.magnification);
     this.root.classList.toggle("is-background-hidden", !settings.showDockBackground);
     this.root.classList.toggle("is-border-hidden", !settings.showDockBorder);
-    this.root.classList.toggle(
-      "is-hot-corner-background-hidden",
-      !settings.hotCornerShowBackground,
-    );
-    this.root.classList.toggle("is-hot-corner-border-hidden", !settings.hotCornerShowBorder);
-
-    const hotCornersActive = settings.autoHide && settings.hotCornersEnabled;
-    for (const [position, corner] of this.hotCorners) {
-      corner.hidden = !hotCornersActive || settings[HOT_CORNER_SETTING_KEYS[position]] !== true;
-    }
+    this.root.classList.toggle("is-trigger-hidden", !settings.showTrigger);
+    this.root.classList.toggle("is-trigger-background-hidden", !settings.triggerShowBackground);
+    this.root.classList.toggle("is-trigger-border-hidden", !settings.triggerShowBorder);
 
     this.setRootVariables(settings);
     this.panel.replaceChildren();
@@ -282,11 +255,11 @@ class DockInstance extends Component {
     style.setProperty("--ledge-padding", `${settings.padding}px`);
     style.setProperty("--ledge-radius", `${settings.radius}px`);
     style.setProperty("--ledge-trigger-size", `${settings.triggerSize}px`);
-    style.setProperty("--ledge-hot-corner-size", `${settings.hotCornerActivationSize}px`);
-    style.setProperty("--ledge-hot-corner-opacity", `${settings.hotCornerSurfaceOpacity}%`);
-    style.setProperty("--ledge-hot-corner-angle", `${settings.hotCornerGradientAngle}deg`);
-    style.setProperty("--ledge-hot-corner-radius", `${settings.hotCornerRadius}px`);
-    style.setProperty("--ledge-hot-corner-border-width", `${settings.hotCornerBorderWidth}px`);
+    style.setProperty("--ledge-trigger-surface-thickness", `${settings.triggerSurfaceThickness}px`);
+    style.setProperty("--ledge-trigger-opacity", `${settings.triggerSurfaceOpacity}%`);
+    style.setProperty("--ledge-trigger-angle", `${settings.triggerGradientAngle}deg`);
+    style.setProperty("--ledge-trigger-radius", `${settings.triggerRadius}px`);
+    style.setProperty("--ledge-trigger-border-width", `${settings.triggerBorderWidth}px`);
     style.setProperty("--ledge-motion-duration", `${settings.motionDuration}ms`);
     style.setProperty("--ledge-magnification", String(settings.magnificationScale));
     style.setProperty("--ledge-neighbor-scale", String(settings.neighborScale));
@@ -301,8 +274,8 @@ class DockInstance extends Component {
       settings.borderColor || "var(--background-modifier-border-hover)",
     );
     style.setProperty(
-      "--ledge-hot-corner-border-color",
-      settings.hotCornerBorderColor || "var(--background-modifier-border-hover)",
+      "--ledge-trigger-border-color",
+      settings.triggerBorderColor || "var(--background-modifier-border-hover)",
     );
 
     if (settings.surfaceMode === "solid") {
@@ -316,15 +289,15 @@ class DockInstance extends Component {
       style.setProperty("--ledge-surface-end", "var(--background-primary-alt)");
     }
 
-    if (settings.hotCornerSurfaceMode === "solid") {
-      style.setProperty("--ledge-hot-corner-start", settings.hotCornerSurfaceColor);
-      style.setProperty("--ledge-hot-corner-end", settings.hotCornerSurfaceColor);
-    } else if (settings.hotCornerSurfaceMode === "gradient") {
-      style.setProperty("--ledge-hot-corner-start", settings.hotCornerGradientStart);
-      style.setProperty("--ledge-hot-corner-end", settings.hotCornerGradientEnd);
+    if (settings.triggerSurfaceMode === "solid") {
+      style.setProperty("--ledge-trigger-start", settings.triggerSurfaceColor);
+      style.setProperty("--ledge-trigger-end", settings.triggerSurfaceColor);
+    } else if (settings.triggerSurfaceMode === "gradient") {
+      style.setProperty("--ledge-trigger-start", settings.triggerGradientStart);
+      style.setProperty("--ledge-trigger-end", settings.triggerGradientEnd);
     } else {
-      style.setProperty("--ledge-hot-corner-start", "var(--interactive-accent)");
-      style.setProperty("--ledge-hot-corner-end", "var(--background-secondary)");
+      style.setProperty("--ledge-trigger-start", "var(--interactive-accent)");
+      style.setProperty("--ledge-trigger-end", "var(--background-secondary)");
     }
   }
 
@@ -476,12 +449,15 @@ class DockInstance extends Component {
     top = Math.min(Math.max(safety, top), Math.max(safety, viewportHeight - panelHeight - safety));
     this.panel.style.left = `${left}px`;
     this.panel.style.top = `${top}px`;
-    this.positionTrigger(rect, position, settings.triggerSize);
-    this.positionHotCorners(rect, settings.hotCornerActivationSize);
+    this.positionTrigger(rect, position, settings.triggerSize, settings.triggerLength);
   }
 
-  private positionTrigger(rect: DOMRect, position: DockPosition, triggerSize: number): void {
-    const triggerLength = 86;
+  private positionTrigger(
+    rect: DOMRect,
+    position: DockPosition,
+    triggerSize: number,
+    triggerLength: number,
+  ): void {
     let left = rect.left;
     let top = rect.top;
     let width = triggerSize;
@@ -506,22 +482,6 @@ class DockInstance extends Component {
     this.trigger.style.top = `${top}px`;
     this.trigger.style.width = `${width}px`;
     this.trigger.style.height = `${height}px`;
-  }
-
-  private positionHotCorners(rect: DOMRect, size: number): void {
-    const viewportWidth = this.document.defaultView?.innerWidth
-      || this.document.documentElement.clientWidth;
-    const viewportHeight = this.document.defaultView?.innerHeight
-      || this.document.documentElement.clientHeight;
-    const left = Math.min(Math.max(0, rect.left), Math.max(0, viewportWidth - size));
-    const right = Math.min(Math.max(0, rect.right - size), Math.max(0, viewportWidth - size));
-    const top = Math.min(Math.max(0, rect.top), Math.max(0, viewportHeight - size));
-    const bottom = Math.min(Math.max(0, rect.bottom - size), Math.max(0, viewportHeight - size));
-
-    for (const [position, corner] of this.hotCorners) {
-      corner.style.left = `${position.endsWith("right") ? right : left}px`;
-      corner.style.top = `${position.startsWith("bottom") ? bottom : top}px`;
-    }
   }
 
   private markActiveTarget(): void {
@@ -565,21 +525,6 @@ class DockInstance extends Component {
       this.clearTimers();
       this.setVisible(!this.visible);
     });
-  }
-
-  private bindHotCornerBehavior(): void {
-    for (const corner of this.hotCorners.values()) {
-      this.registerDomEvent(corner, "pointerenter", () => {
-        this.scheduleShow(this.controller.settings().hotCornerRevealDelay);
-      });
-      this.registerDomEvent(corner, "pointerleave", () => this.scheduleHide());
-      this.registerDomEvent(corner, "focus", () => this.setVisible(true));
-      this.registerDomEvent(corner, "click", () => {
-        if (!this.controller.settings().autoHide) return;
-        this.clearTimers();
-        this.setVisible(true);
-      });
-    }
   }
 
   private bindDockInteraction(): void {
@@ -769,9 +714,6 @@ class DockInstance extends Component {
     this.panel.classList.toggle("is-visible", visible);
     this.trigger.classList.toggle("is-visible", visible);
     this.trigger.setAttribute("aria-expanded", visible ? "true" : "false");
-    for (const corner of this.hotCorners.values()) {
-      corner.setAttribute("aria-expanded", visible ? "true" : "false");
-    }
     if (!visible) this.clearMagnification();
   }
 }

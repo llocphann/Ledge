@@ -1,7 +1,7 @@
 import { Notice, Plugin } from "obsidian";
 import { DockController } from "./dock";
 import { LedgeSettingTab } from "./settings-tab";
-import { normalizeSettings } from "./settings";
+import { hasLegacyHotCornerSettings, normalizeSettings } from "./settings";
 import type { LedgeSettings } from "./types";
 
 export default class LedgePlugin extends Plugin {
@@ -10,8 +10,11 @@ export default class LedgePlugin extends Plugin {
   private unloaded = false;
 
   async onload(): Promise<void> {
-    this.settings = normalizeSettings(await this.loadData());
+    const storedSettings: unknown = await this.loadData();
+    const shouldPersistTriggerMigration = hasLegacyHotCornerSettings(storedSettings);
+    this.settings = normalizeSettings(storedSettings);
     await this.migrateLegacyDockOrder();
+    if (shouldPersistTriggerMigration) await this.saveData(this.settings);
     this.addSettingTab(new LedgeSettingTab(this.app, this));
 
     this.addCommand({
