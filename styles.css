@@ -6,6 +6,14 @@
   --ledge-padding: 8px;
   --ledge-radius: 18px;
   --ledge-trigger-size: 14px;
+  --ledge-hot-corner-size: 36px;
+  --ledge-hot-corner-opacity: 72%;
+  --ledge-hot-corner-angle: 145deg;
+  --ledge-hot-corner-radius: 28px;
+  --ledge-hot-corner-border-width: 1px;
+  --ledge-hot-corner-start: var(--interactive-accent);
+  --ledge-hot-corner-end: var(--background-secondary);
+  --ledge-hot-corner-border-color: var(--background-modifier-border-hover);
   --ledge-motion-duration: 220ms;
   --ledge-magnification: 1.35;
   --ledge-neighbor-scale: 1.14;
@@ -73,6 +81,87 @@
 .ledge-dock-trigger:focus-visible {
   outline: 2px solid var(--ledge-accent);
   outline-offset: -2px;
+}
+
+.ledge-hot-corner {
+  position: fixed;
+  z-index: 1;
+  width: var(--ledge-hot-corner-size);
+  height: var(--ledge-hot-corner-size);
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  border: var(--ledge-hot-corner-border-width) solid
+    color-mix(in srgb, var(--ledge-hot-corner-border-color) 82%, transparent);
+  background:
+    linear-gradient(
+      var(--ledge-hot-corner-angle),
+      color-mix(
+        in srgb,
+        var(--ledge-hot-corner-start) var(--ledge-hot-corner-opacity),
+        transparent
+      ),
+      color-mix(
+        in srgb,
+        var(--ledge-hot-corner-end) var(--ledge-hot-corner-opacity),
+        transparent
+      )
+    );
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--text-normal) 9%, transparent),
+    0 5px 18px color-mix(in srgb, var(--background-primary) 54%, transparent);
+  backdrop-filter: blur(10px) saturate(1.08);
+  pointer-events: auto;
+  cursor: default;
+  transition:
+    filter var(--ledge-motion-duration) ease,
+    box-shadow var(--ledge-motion-duration) ease;
+}
+
+.ledge-hot-corner[hidden] {
+  display: none;
+}
+
+.ledge-hot-corner[data-hot-corner="top-left"] {
+  border-radius: 0 0 var(--ledge-hot-corner-radius) 0;
+}
+
+.ledge-hot-corner[data-hot-corner="top-right"] {
+  border-radius: 0 0 0 var(--ledge-hot-corner-radius);
+}
+
+.ledge-hot-corner[data-hot-corner="bottom-left"] {
+  border-radius: 0 var(--ledge-hot-corner-radius) 0 0;
+}
+
+.ledge-hot-corner[data-hot-corner="bottom-right"] {
+  border-radius: var(--ledge-hot-corner-radius) 0 0 0;
+}
+
+.ledge-hot-corner:hover,
+.ledge-hot-corner:focus-visible,
+.ledge-hot-corner[aria-expanded="true"] {
+  filter: brightness(1.14);
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),
+    0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);
+}
+
+.ledge-hot-corner:focus-visible {
+  outline: 2px solid var(--ledge-accent);
+  outline-offset: -3px;
+}
+
+.ledge-dock-root.is-hot-corner-background-hidden .ledge-hot-corner {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.ledge-dock-root.is-hot-corner-border-hidden .ledge-hot-corner {
+  border-color: transparent;
 }
 
 .ledge-dock-root[data-position="left"] .ledge-dock-trigger::before,
@@ -640,6 +729,7 @@
 
 .ledge-settings-root:not([data-ledge-settings-tab="layout"]) .ledge-settings-panel-layout,
 .ledge-settings-root:not([data-ledge-settings-tab="behavior"]) .ledge-settings-panel-behavior,
+.ledge-settings-root:not([data-ledge-settings-tab="hot-corners"]) .ledge-settings-panel-hot-corners,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
 .ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
 .ledge-settings-root:not([data-ledge-settings-tab="about"]) .ledge-settings-panel-about {
@@ -647,14 +737,38 @@
 }
 
 .ledge-support-link {
+  --ledge-support-background: #fd0;
+  --ledge-support-foreground: #000;
+
+  min-width: max-content;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
   gap: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid var(--ledge-support-foreground);
+  border-radius: var(--button-radius, 5px);
+  color: var(--ledge-support-foreground);
+  background: var(--ledge-support-background);
+  box-shadow: var(--input-shadow);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ledge-support-link:hover,
+.ledge-support-link:focus-visible {
+  color: var(--ledge-support-foreground);
+  background: color-mix(in srgb, var(--ledge-support-background) 86%, #fff);
   text-decoration: none;
 }
 
 .ledge-support-link-icon,
 .ledge-support-link-icon > svg {
+  flex: 0 0 auto;
   width: var(--icon-s);
   height: var(--icon-s);
   display: block;
@@ -662,6 +776,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ledge-dock-trigger,
+  .ledge-hot-corner,
   .ledge-dock-panel,
   .ledge-dock-item,
   .ledge-dock-label {

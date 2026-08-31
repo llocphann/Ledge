@@ -10,6 +10,8 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Theme-aware, solid, and gradient surfaces.
 - Independent controls for the shared dock background and outer border.
 - Adjustable reveal delay, hide delay, trigger size, and motion duration.
+- Optional per-corner hot zones that reveal the dock without polling.
+- Independent hot-corner activation size, delay, enabled corners, background, border, radius, opacity, and theme/solid/gradient colors.
 - Optional macOS-style focused and neighboring item magnification.
 - Built-in Lucide icons or images stored inside the vault.
 - Per-item icon size, icon color, and tile gradient overrides.
@@ -17,7 +19,7 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Pointer drag-and-drop plus `Alt` + arrow keyboard reordering.
 - Same-leaf navigation that does not open an extra tab.
 - Pop-out window support with automatic lifecycle cleanup.
-- Tabbed settings for faster navigation between layout, behavior, appearance, items, and support.
+- Tabbed settings for faster navigation between layout, behavior, hot corners, appearance, items, and support.
 
 ## Configure Ledge
 
@@ -31,6 +33,8 @@ Every dock item has:
 - optional icon size, color, and tile gradient overrides.
 
 For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
+
+Under **Hot corners**, enable any combination of the four root-pane corners. Resting the pointer inside an enabled corner reveals the dock after the configured activation delay. Hot corners work with auto-hide and use only pointer/focus events while idle.
 
 ## Install manually
 
@@ -52,9 +56,7 @@ The release files are `main.js`, `manifest.json`, and `styles.css`. GitHub relea
 
 If Ledge is useful to you, you can support its continued development:
 
-<a href="https://www.buymeacoffee.com/llocphann">
-  <img src="assets/buy-me-a-coffee.svg" alt="Buy me a coffee" width="217">
-</a>
+[![Buy me a coffee](https://raw.githubusercontent.com/llocphann/Ledge/main/assets/buy-me-a-coffee.svg)](https://www.buymeacoffee.com/llocphann)
 
 ## License
 

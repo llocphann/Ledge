@@ -28,6 +28,7 @@ const FUNDING_URL = "https://www.buymeacoffee.com/llocphann";
 const SETTINGS_TABS = [
   { id: "layout", label: "Layout", icon: "layout-dashboard" },
   { id: "behavior", label: "Behavior", icon: "timer" },
+  { id: "hot-corners", label: "Hot corners", icon: "scan" },
   { id: "appearance", label: "Appearance", icon: "palette" },
   { id: "items", label: "Items", icon: "list" },
   { id: "about", label: "About", icon: "info" },
@@ -48,6 +49,7 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.tabNavigationDefinitions(),
       this.layoutDefinitions(),
       this.behaviorDefinitions(),
+      this.hotCornerDefinitions(),
       this.appearanceDefinitions(),
       this.itemDefinitions(),
       this.aboutDefinitions(),
@@ -68,6 +70,9 @@ export class LedgeSettingTab extends PluginSettingTab {
 
     if (key === "accentColorEnabled") return Boolean(this.ledge.settings.accentColor);
     if (key === "borderColorEnabled") return Boolean(this.ledge.settings.borderColor);
+    if (key === "hotCornerBorderColorEnabled") {
+      return Boolean(this.ledge.settings.hotCornerBorderColor);
+    }
     return this.ledge.settings[key as keyof LedgeSettings];
   }
 
@@ -88,6 +93,8 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.ledge.settings.accentColor = value === true ? "#7dd3fc" : "";
     } else if (key === "borderColorEnabled") {
       this.ledge.settings.borderColor = value === true ? "#64748b" : "";
+    } else if (key === "hotCornerBorderColorEnabled") {
+      this.ledge.settings.hotCornerBorderColor = value === true ? "#64748b" : "";
     } else {
       this.setGlobalValue(key, value);
     }
@@ -98,6 +105,11 @@ export class LedgeSettingTab extends PluginSettingTab {
       "showDockBackground",
       "showDockBorder",
       "surfaceMode",
+      "hotCornersEnabled",
+      "hotCornerShowBackground",
+      "hotCornerShowBorder",
+      "hotCornerSurfaceMode",
+      "hotCornerBorderColorEnabled",
       "accentColorEnabled",
       "borderColorEnabled",
     ].includes(key)) {
@@ -246,6 +258,176 @@ export class LedgeSettingTab extends PluginSettingTab {
           name: "Show labels",
           desc: "Display an item label while its button is hovered or focused.",
           control: { type: "toggle", key: "showLabels" },
+        },
+      ],
+    };
+  }
+
+  private hotCornerDefinitions(): SettingDefinitionItem {
+    const enabled = (): boolean => this.ledge.settings.hotCornersEnabled;
+    const backgroundVisible = (): boolean => enabled()
+      && this.ledge.settings.hotCornerShowBackground;
+    const borderVisible = (): boolean => enabled()
+      && this.ledge.settings.hotCornerShowBorder;
+
+    return {
+      type: "group",
+      heading: "Hot corners",
+      cls: "ledge-settings-panel-hot-corners",
+      items: [
+        {
+          name: "Enable hot corners",
+          desc: "Reveal the dock by resting the pointer in any enabled root-pane corner. Hot corners are active while auto-hide is enabled.",
+          control: { type: "toggle", key: "hotCornersEnabled" },
+        },
+        {
+          name: "Top-left corner",
+          control: { type: "toggle", key: "hotCornerTopLeftEnabled" },
+          visible: enabled,
+        },
+        {
+          name: "Top-right corner",
+          control: { type: "toggle", key: "hotCornerTopRightEnabled" },
+          visible: enabled,
+        },
+        {
+          name: "Bottom-left corner",
+          control: { type: "toggle", key: "hotCornerBottomLeftEnabled" },
+          visible: enabled,
+        },
+        {
+          name: "Bottom-right corner",
+          control: { type: "toggle", key: "hotCornerBottomRightEnabled" },
+          visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Activation size",
+            "Width and height of each corner activation area.",
+            "hotCornerActivationSize",
+            8,
+            128,
+            1,
+            "px",
+          ),
+          visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Activation delay",
+            "How long the pointer must remain in a hot corner before the dock appears.",
+            "hotCornerRevealDelay",
+            0,
+            3000,
+            25,
+            "ms",
+          ),
+          visible: enabled,
+        },
+        {
+          name: "Show background",
+          desc: "Display a visible surface inside enabled hot corners. The activation areas still work when hidden.",
+          control: { type: "toggle", key: "hotCornerShowBackground" },
+          visible: enabled,
+        },
+        {
+          name: "Background style",
+          desc: "Theme follows the active Obsidian palette. Solid and gradient use the colors below.",
+          control: {
+            type: "dropdown",
+            key: "hotCornerSurfaceMode",
+            options: {
+              theme: "Theme palette",
+              solid: "Solid color",
+              gradient: "Gradient",
+            },
+          },
+          visible: backgroundVisible,
+        },
+        {
+          ...this.slider(
+            "Background opacity",
+            "Opacity of the corner surface without reducing its activation area.",
+            "hotCornerSurfaceOpacity",
+            0,
+            100,
+            1,
+            "%",
+          ),
+          visible: backgroundVisible,
+        },
+        {
+          name: "Solid color",
+          control: { type: "color", key: "hotCornerSurfaceColor" },
+          visible: () => backgroundVisible()
+            && this.ledge.settings.hotCornerSurfaceMode === "solid",
+        },
+        {
+          name: "Gradient start",
+          control: { type: "color", key: "hotCornerGradientStart" },
+          visible: () => backgroundVisible()
+            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+        },
+        {
+          name: "Gradient end",
+          control: { type: "color", key: "hotCornerGradientEnd" },
+          visible: () => backgroundVisible()
+            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+        },
+        {
+          ...this.slider(
+            "Gradient angle",
+            "Direction of the hot-corner gradient.",
+            "hotCornerGradientAngle",
+            0,
+            360,
+            1,
+            "°",
+          ),
+          visible: () => backgroundVisible()
+            && this.ledge.settings.hotCornerSurfaceMode === "gradient",
+        },
+        {
+          ...this.slider(
+            "Inner radius",
+            "Round the edge facing into the pane. A larger value creates a quarter-circle shape.",
+            "hotCornerRadius",
+            0,
+            128,
+            1,
+            "px",
+          ),
+          visible: enabled,
+        },
+        {
+          name: "Show border",
+          desc: "Draw an outline around the visible hot-corner surface.",
+          control: { type: "toggle", key: "hotCornerShowBorder" },
+          visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Border width",
+            "Thickness of the hot-corner outline.",
+            "hotCornerBorderWidth",
+            0,
+            6,
+            1,
+            "px",
+          ),
+          visible: borderVisible,
+        },
+        {
+          name: "Custom border color",
+          desc: "Disable this option to use the active theme border color.",
+          control: { type: "toggle", key: "hotCornerBorderColorEnabled" },
+          visible: borderVisible,
+        },
+        {
+          name: "Border color",
+          control: { type: "color", key: "hotCornerBorderColor" },
+          visible: () => borderVisible()
+            && Boolean(this.ledge.settings.hotCornerBorderColor),
         },
       ],
     };
@@ -573,19 +755,34 @@ export class LedgeSettingTab extends PluginSettingTab {
       "magnification",
       "showDockBackground",
       "showDockBorder",
+      "hotCornersEnabled",
+      "hotCornerTopLeftEnabled",
+      "hotCornerTopRightEnabled",
+      "hotCornerBottomLeftEnabled",
+      "hotCornerBottomRightEnabled",
+      "hotCornerShowBackground",
+      "hotCornerShowBorder",
     ].includes(key)) {
       settings[key as "enabled"] = value === true;
     } else if (key === "position") {
       settings.position = value as DockPosition;
     } else if (key === "surfaceMode") {
       settings.surfaceMode = value as SurfaceMode;
+    } else if (key === "hotCornerSurfaceMode") {
+      settings.hotCornerSurfaceMode = value as SurfaceMode;
     } else if ([
       "itemSize", "iconSize", "gap", "padding", "radius", "edgeOffset", "triggerSize",
       "revealDelay", "hideDelay", "motionDuration", "magnificationScale", "neighborScale",
-      "surfaceOpacity", "gradientAngle",
+      "surfaceOpacity", "gradientAngle", "hotCornerActivationSize", "hotCornerRevealDelay",
+      "hotCornerSurfaceOpacity", "hotCornerGradientAngle", "hotCornerRadius",
+      "hotCornerBorderWidth",
     ].includes(key)) {
       settings[key as "itemSize"] = Number(value);
-    } else if (["surfaceColor", "gradientStart", "gradientEnd", "accentColor", "borderColor"].includes(key)) {
+    } else if ([
+      "surfaceColor", "gradientStart", "gradientEnd", "accentColor", "borderColor",
+      "hotCornerSurfaceColor", "hotCornerGradientStart", "hotCornerGradientEnd",
+      "hotCornerBorderColor",
+    ].includes(key)) {
       settings[key as "surfaceColor"] = typeof value === "string" ? value : "";
     }
   }

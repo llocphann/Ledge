@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add event-driven, independently selectable hot corners that reveal the dock.
+- Add activation size and delay controls plus theme, solid, gradient, opacity, border, and radius options for hot corners.
+- Keep the Buy Me a Coffee settings button on one yellow line and use Community-compatible Markdown in the README.
+
 ## 0.1.0
 
 - Add eight edge and corner positions.
