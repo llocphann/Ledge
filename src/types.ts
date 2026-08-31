@@ -51,7 +51,6 @@ export interface DockItemSettings {
 }
 
 export interface LedgeSettings {
-  legacyOrderMigrated: boolean;
   enabled: boolean;
   position: DockPosition;
   autoHide: boolean;

@@ -13,7 +13,6 @@ export default class LedgePlugin extends Plugin {
     const storedSettings: unknown = await this.loadData();
     const shouldPersistTriggerMigration = hasLegacyHotCornerSettings(storedSettings);
     this.settings = normalizeSettings(storedSettings);
-    await this.migrateLegacyDockOrder();
     if (shouldPersistTriggerMigration) await this.saveData(this.settings);
     this.addSettingTab(new LedgeSettingTab(this.app, this));
 
@@ -43,31 +42,5 @@ export default class LedgePlugin extends Plugin {
     this.settings = normalizeSettings(this.settings);
     await this.saveData(this.settings);
     if (refresh) this.controller?.applySettings();
-  }
-
-  private async migrateLegacyDockOrder(): Promise<void> {
-    if (this.settings.legacyOrderMigrated) return;
-    this.settings.legacyOrderMigrated = true;
-    try {
-      const vaultName = this.app.vault.getName();
-      const storageKey = `custom-views:homepage-v2:dock-order:${encodeURIComponent(vaultName)}`;
-      const raw = this.app.workspace.containerEl.win.localStorage.getItem(storageKey);
-      const legacyOrder: unknown = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(legacyOrder)) {
-        const rank = new Map(
-          legacyOrder
-            .filter((target): target is string => typeof target === "string")
-            .map((target, index) => [target, index]),
-        );
-        this.settings.items.sort((left, right) => {
-          const leftRank = rank.get(left.target) ?? Number.MAX_SAFE_INTEGER;
-          const rightRank = rank.get(right.target) ?? Number.MAX_SAFE_INTEGER;
-          return leftRank - rightRank;
-        });
-      }
-    } catch (error) {
-      console.debug("[Ledge] Could not migrate the previous dock order", error);
-    }
-    await this.saveData(this.settings);
   }
 }

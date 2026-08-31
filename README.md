@@ -45,6 +45,8 @@ Under **Visibility**, add optional include and exclude rules. With no enabled in
 
 Use **Data → Export settings** to download a portable JSON backup. Import replaces the current configuration only after Ledge validates the file type and schema, normalizes every value, repairs duplicate IDs, and applies item, rule-count, and file-size limits.
 
+Ledge persists its configuration through Obsidian's plugin data API in the plugin's `data.json`. It does not use browser `localStorage` or `sessionStorage`.
+
 See [ROADMAP.md](ROADMAP.md) for the planned multi-preset Dock system and context-based preset routing.
 
 ## Performance and stability
@@ -67,7 +69,7 @@ npm install
 npm run check
 ```
 
-The release files are `main.js`, `manifest.json`, and `styles.css`. GitHub release tags must match the manifest version exactly without a `v` prefix.
+The release files are `main.js`, `manifest.json`, and `styles.css`. GitHub release tags must match the manifest version exactly without a `v` prefix. The release workflow generates user-facing notes and a GitHub artifact attestation for every published asset.
 
 ## Support
 

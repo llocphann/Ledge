@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.1.1
+
+- Remove the legacy browser-storage Dock-order migration so all persistent settings use Obsidian's plugin data API.
+- Generate release notes automatically for every GitHub release.
+- Publish GitHub artifact attestations for `main.js`, `manifest.json`, and `styles.css`.
+
 ## 1.1.0
 
 - Add a permanently visible destructive button to every Dock item page.

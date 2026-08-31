@@ -42,7 +42,6 @@ const DEFAULT_ITEMS: DockItemSettings[] = [
 ];
 
 export const DEFAULT_SETTINGS: LedgeSettings = {
-  legacyOrderMigrated: false,
   enabled: true,
   position: "left",
   autoHide: true,
@@ -219,10 +218,6 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     .filter((item): item is DockItemSettings => item !== null);
 
   return {
-    legacyOrderMigrated: booleanValue(
-      source.legacyOrderMigrated,
-      DEFAULT_SETTINGS.legacyOrderMigrated,
-    ),
     enabled: booleanValue(source.enabled, DEFAULT_SETTINGS.enabled),
     position: enumValue<DockPosition>(source.position, DOCK_POSITIONS, DEFAULT_SETTINGS.position),
     autoHide: booleanValue(source.autoHide, DEFAULT_SETTINGS.autoHide),

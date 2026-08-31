@@ -91,3 +91,11 @@ void test("Dock item pages expose a visible delete control and runtime work is e
   assert.match(settings, /heading: "Backup & transfer"/);
   assert.doesNotMatch(dock, /setInterval\(|MutationObserver/);
 });
+
+void test("settings persist only through the Obsidian plugin data API", () => {
+  const main = fs.readFileSync("src/main.ts", "utf8");
+
+  assert.match(main, /this\.loadData\(\)/);
+  assert.match(main, /this\.saveData\(this\.settings\)/);
+  assert.doesNotMatch(main, /localStorage|sessionStorage/);
+});
