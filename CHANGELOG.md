@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add independent background, gradient, opacity, radius, and border controls for the full trigger activation area.
+- Add include and exclude visibility rules by note name, exact path, folder, or tag.
+- Refresh Dock visibility when the active file or its indexed tags change.
+- Document the multi-preset Dock architecture and context-routing roadmap.
+
 ## 1.0.0
 
 - Replace the experimental Hot Corners interface with a dedicated edge-trigger settings tab.

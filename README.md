@@ -10,6 +10,7 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Theme-aware, solid, and gradient surfaces.
 - Independent controls for the shared dock background and outer border.
 - Adjustable trigger activation thickness, length, reveal delay, and hide delay.
+- Independent appearance controls for the full activation hitbox and the smaller trigger pill.
 - Theme-aware, solid, and gradient trigger surfaces with independent visibility, thickness, opacity, radius, background, and border controls.
 - A transparent trigger mode that keeps the activation area usable without displaying a visual strip.
 - Optional macOS-style focused and neighboring item magnification.
@@ -19,7 +20,8 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Pointer drag-and-drop plus `Alt` + arrow keyboard reordering.
 - Same-leaf navigation that does not open an extra tab.
 - Pop-out window support with automatic lifecycle cleanup.
-- Tabbed settings for faster navigation between layout, behavior, trigger, appearance, items, and support.
+- Context visibility rules by note name, exact path, folder, or tag, with exclude rules taking priority.
+- Tabbed settings for faster navigation between layout, behavior, visibility, trigger, appearance, items, and support.
 
 ## Configure Ledge
 
@@ -35,6 +37,12 @@ Every dock item has:
 For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
 
 Under **Trigger**, configure the activation strip attached to the active root pane. Its pointer-sensitive thickness and length are independent from the visible strip, so the visual surface can be hidden without losing access to the dock. Background and border controls support the current theme, a solid color, or a custom gradient.
+
+The rectangle surrounding the trigger pill is the pointer-sensitive activation area. When that outer area is transparent, the current pane or theme background shows through. Ledge provides separate theme, solid, gradient, opacity, radius, and border controls for the activation area and for the pill inside it.
+
+Under **Visibility**, add optional include and exclude rules. With no enabled include rules, the Dock remains available everywhere. Once an include rule is enabled, the Dock appears only in matching contexts. Exclude rules always take priority. Note names, exact vault paths, folders, and tags—including nested tags—are supported.
+
+See [ROADMAP.md](ROADMAP.md) for the planned multi-preset Dock system and context-based preset routing.
 
 ## Install manually
 

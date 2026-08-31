@@ -13,10 +13,14 @@ void test("fresh installs receive usable defaults", () => {
   assert.equal(settings.showDockBorder, true);
   assert.equal(settings.showTrigger, true);
   assert.equal(settings.triggerLength, 86);
+  assert.equal(settings.triggerAreaShowBackground, true);
+  assert.equal(settings.triggerAreaSurfaceMode, "theme");
   assert.equal(settings.triggerSurfaceThickness, 5);
   assert.equal(settings.triggerSurfaceMode, "theme");
   assert.equal(settings.items.length, 9);
   assert.ok(settings.items.every((item) => item.iconSource === "lucide"));
+  assert.deepEqual(settings.includeRules, []);
+  assert.deepEqual(settings.excludeRules, []);
 });
 
 void test("bounded settings and supported enums survive loading", () => {
@@ -28,6 +32,9 @@ void test("bounded settings and supported enums survive loading", () => {
     surfaceMode: "glass",
     triggerSize: 999,
     triggerLength: 999,
+    triggerAreaSurfaceOpacity: 999,
+    triggerAreaRadius: 999,
+    triggerAreaSurfaceMode: "glass",
     triggerSurfaceThickness: 999,
     triggerSurfaceMode: "glass",
     triggerBorderWidth: 99,
@@ -39,6 +46,9 @@ void test("bounded settings and supported enums survive loading", () => {
   assert.equal(settings.surfaceMode, "theme");
   assert.equal(settings.triggerSize, 64);
   assert.equal(settings.triggerLength, 360);
+  assert.equal(settings.triggerAreaSurfaceOpacity, 100);
+  assert.equal(settings.triggerAreaRadius, 40);
+  assert.equal(settings.triggerAreaSurfaceMode, "theme");
   assert.equal(settings.triggerSurfaceThickness, 48);
   assert.equal(settings.triggerSurfaceMode, "theme");
   assert.equal(settings.triggerBorderWidth, 6);
@@ -51,6 +61,8 @@ void test("zero values and disabled toggles are preserved", () => {
     showDockBackground: false,
     showDockBorder: false,
     showTrigger: false,
+    triggerAreaShowBackground: false,
+    triggerAreaShowBorder: false,
     triggerShowBackground: false,
     triggerShowBorder: false,
     gap: 0,
@@ -60,6 +72,9 @@ void test("zero values and disabled toggles are preserved", () => {
     motionDuration: 0,
     surfaceOpacity: 0,
     triggerSurfaceOpacity: 0,
+    triggerAreaSurfaceOpacity: 0,
+    triggerAreaRadius: 0,
+    triggerAreaBorderWidth: 0,
     triggerRadius: 0,
     triggerBorderWidth: 0,
     items: [],
@@ -69,6 +84,8 @@ void test("zero values and disabled toggles are preserved", () => {
   assert.equal(settings.showDockBackground, false);
   assert.equal(settings.showDockBorder, false);
   assert.equal(settings.showTrigger, false);
+  assert.equal(settings.triggerAreaShowBackground, false);
+  assert.equal(settings.triggerAreaShowBorder, false);
   assert.equal(settings.triggerShowBackground, false);
   assert.equal(settings.triggerShowBorder, false);
   assert.equal(settings.gap, 0);
@@ -78,6 +95,9 @@ void test("zero values and disabled toggles are preserved", () => {
   assert.equal(settings.motionDuration, 0);
   assert.equal(settings.surfaceOpacity, 0);
   assert.equal(settings.triggerSurfaceOpacity, 0);
+  assert.equal(settings.triggerAreaSurfaceOpacity, 0);
+  assert.equal(settings.triggerAreaRadius, 0);
+  assert.equal(settings.triggerAreaBorderWidth, 0);
   assert.equal(settings.triggerRadius, 0);
   assert.equal(settings.triggerBorderWidth, 0);
   assert.deepEqual(settings.items, []);
@@ -122,4 +142,20 @@ void test("duplicate item IDs are repaired without losing order", () => {
   });
   assert.deepEqual(settings.items.map((item) => item.id), ["same", "same-2"]);
   assert.deepEqual(settings.items.map((item) => item.label), ["One", "Two"]);
+});
+
+void test("visibility rules normalize paths, tags, and duplicate IDs", () => {
+  const settings = normalizeSettings({
+    includeRules: [
+      { id: "same", enabled: true, matchType: "tag", matchValue: "#Media" },
+      { id: "same", enabled: true, matchType: "folder", matchValue: "20_Personal_Life\\" },
+    ],
+    excludeRules: [
+      { id: "exclude", enabled: true, matchType: "note", matchValue: "Homepage.md" },
+    ],
+  });
+  assert.deepEqual(settings.includeRules.map((rule) => rule.id), ["same", "same-2"]);
+  assert.equal(settings.includeRules[0]?.matchValue, "Media");
+  assert.equal(settings.includeRules[1]?.matchValue, "20_Personal_Life");
+  assert.equal(settings.excludeRules[0]?.matchValue, "Homepage");
 });

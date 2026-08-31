@@ -1,9 +1,11 @@
 import {
   DOCK_POSITIONS,
+  CONTEXT_MATCH_TYPES,
   ICON_RENDER_MODES,
   ICON_SOURCES,
   SURFACE_MODES,
   type DockItemSettings,
+  type DockVisibilityRule,
   type DockPosition,
   type IconRenderMode,
   type IconSource,
@@ -54,6 +56,17 @@ export const DEFAULT_SETTINGS: LedgeSettings = {
   showTrigger: true,
   triggerSize: 14,
   triggerLength: 86,
+  triggerAreaShowBackground: true,
+  triggerAreaShowBorder: false,
+  triggerAreaSurfaceMode: "theme",
+  triggerAreaSurfaceOpacity: 100,
+  triggerAreaSurfaceColor: "#1f2937",
+  triggerAreaGradientStart: "#1f2937",
+  triggerAreaGradientEnd: "#111827",
+  triggerAreaGradientAngle: 145,
+  triggerAreaRadius: 0,
+  triggerAreaBorderWidth: 1,
+  triggerAreaBorderColor: "",
   triggerSurfaceThickness: 5,
   triggerShowBackground: true,
   triggerShowBorder: true,
@@ -82,6 +95,8 @@ export const DEFAULT_SETTINGS: LedgeSettings = {
   gradientAngle: 145,
   accentColor: "",
   borderColor: "",
+  includeRules: [],
+  excludeRules: [],
   items: DEFAULT_ITEMS,
 };
 
@@ -151,6 +166,42 @@ function normalizeItem(value: unknown, index: number, usedIds: Set<string>): Doc
   };
 }
 
+function normalizeRuleMatchValue(value: unknown, matchType: DockVisibilityRule["matchType"]): string {
+  const raw = stringValue(value, "", 500);
+  if (matchType === "tag") return raw.replace(/^#+/, "");
+  if (matchType === "note") return raw.replace(/\.md$/i, "");
+  return raw.replaceAll("\\", "/").replace(/\/{2,}/g, "/").replace(/^\.\//, "").replace(/\/$/, "");
+}
+
+function normalizeVisibilityRules(value: unknown, prefix: string): DockVisibilityRule[] {
+  if (!Array.isArray(value)) return [];
+  const usedIds = new Set<string>();
+  return value.slice(0, 96).flatMap((candidate, index) => {
+    if (!candidate || typeof candidate !== "object") return [];
+    const source = candidate as Partial<DockVisibilityRule>;
+    const fallbackId = `${prefix}-${index + 1}`;
+    const baseId = stringValue(source.id, fallbackId, 80) || fallbackId;
+    let id = baseId;
+    let suffix = 2;
+    while (usedIds.has(id)) {
+      id = `${baseId}-${suffix}`;
+      suffix += 1;
+    }
+    usedIds.add(id);
+    const matchType = enumValue(
+      source.matchType,
+      Object.keys(CONTEXT_MATCH_TYPES) as Array<DockVisibilityRule["matchType"]>,
+      "path",
+    );
+    return [{
+      id,
+      enabled: booleanValue(source.enabled, false),
+      matchType,
+      matchValue: normalizeRuleMatchValue(source.matchValue, matchType),
+    }];
+  });
+}
+
 export function normalizeSettings(value: unknown): LedgeSettings {
   const source = value && typeof value === "object" ? value as SettingsInput : {};
   const usedIds = new Set<string>();
@@ -177,6 +228,63 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     showTrigger: booleanValue(source.showTrigger, DEFAULT_SETTINGS.showTrigger),
     triggerSize: clamp(source.triggerSize, DEFAULT_SETTINGS.triggerSize, 4, 64),
     triggerLength: clamp(source.triggerLength, DEFAULT_SETTINGS.triggerLength, 24, 360),
+    triggerAreaShowBackground: booleanValue(
+      source.triggerAreaShowBackground,
+      DEFAULT_SETTINGS.triggerAreaShowBackground,
+    ),
+    triggerAreaShowBorder: booleanValue(
+      source.triggerAreaShowBorder,
+      DEFAULT_SETTINGS.triggerAreaShowBorder,
+    ),
+    triggerAreaSurfaceMode: enumValue<SurfaceMode>(
+      source.triggerAreaSurfaceMode,
+      SURFACE_MODES,
+      DEFAULT_SETTINGS.triggerAreaSurfaceMode,
+    ),
+    triggerAreaSurfaceOpacity: clamp(
+      source.triggerAreaSurfaceOpacity,
+      DEFAULT_SETTINGS.triggerAreaSurfaceOpacity,
+      0,
+      100,
+    ),
+    triggerAreaSurfaceColor: stringValue(
+      source.triggerAreaSurfaceColor,
+      DEFAULT_SETTINGS.triggerAreaSurfaceColor,
+      120,
+    ),
+    triggerAreaGradientStart: stringValue(
+      source.triggerAreaGradientStart,
+      DEFAULT_SETTINGS.triggerAreaGradientStart,
+      120,
+    ),
+    triggerAreaGradientEnd: stringValue(
+      source.triggerAreaGradientEnd,
+      DEFAULT_SETTINGS.triggerAreaGradientEnd,
+      120,
+    ),
+    triggerAreaGradientAngle: clamp(
+      source.triggerAreaGradientAngle,
+      DEFAULT_SETTINGS.triggerAreaGradientAngle,
+      0,
+      360,
+    ),
+    triggerAreaRadius: clamp(
+      source.triggerAreaRadius,
+      DEFAULT_SETTINGS.triggerAreaRadius,
+      0,
+      40,
+    ),
+    triggerAreaBorderWidth: clamp(
+      source.triggerAreaBorderWidth,
+      DEFAULT_SETTINGS.triggerAreaBorderWidth,
+      0,
+      6,
+    ),
+    triggerAreaBorderColor: stringValue(
+      source.triggerAreaBorderColor,
+      DEFAULT_SETTINGS.triggerAreaBorderColor,
+      120,
+    ),
     triggerSurfaceThickness: clamp(
       source.triggerSurfaceThickness,
       DEFAULT_SETTINGS.triggerSurfaceThickness,
@@ -259,6 +367,8 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     gradientAngle: clamp(source.gradientAngle, DEFAULT_SETTINGS.gradientAngle, 0, 360),
     accentColor: stringValue(source.accentColor, DEFAULT_SETTINGS.accentColor, 120),
     borderColor: stringValue(source.borderColor, DEFAULT_SETTINGS.borderColor, 120),
+    includeRules: normalizeVisibilityRules(source.includeRules, "include"),
+    excludeRules: normalizeVisibilityRules(source.excludeRules, "exclude"),
     items,
   };
 }
@@ -273,6 +383,16 @@ export function createDockItem(existingItems: DockItemSettings[]): DockItemSetti
   let id = `item-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
   while (usedIds.has(id)) id = `${id}-new`;
   return dockItem(id, "New item", "", "circle");
+}
+
+export function createVisibilityRule(
+  existingRules: DockVisibilityRule[],
+  prefix: "include" | "exclude",
+): DockVisibilityRule {
+  const usedIds = new Set(existingRules.map((rule) => rule.id));
+  let id = `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  while (usedIds.has(id)) id = `${id}-new`;
+  return { id, enabled: false, matchType: "path", matchValue: "" };
 }
 
 export function cloneDefaultSettings(): LedgeSettings {

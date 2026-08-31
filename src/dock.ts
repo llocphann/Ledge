@@ -3,11 +3,13 @@ import {
   Component,
   Notice,
   TFile,
+  getAllTags,
   getIcon,
   normalizePath,
   setIcon,
   type WorkspaceLeaf,
 } from "obsidian";
+import { dockVisibleForContext, type NoteContext } from "./context-rules";
 import { computeCornerLayout, isCornerPosition, isVerticalPosition } from "./layout";
 import type {
   DockItemSettings,
@@ -42,13 +44,16 @@ export class DockController extends Component {
     this.registerEvent(workspace.on("layout-change", () => this.scheduleRefresh()));
     this.registerEvent(workspace.on("active-leaf-change", () => this.scheduleRefresh()));
     this.registerEvent(workspace.on("file-open", () => this.scheduleRefresh()));
+    this.registerEvent(this.host.app.metadataCache.on("changed", () => this.scheduleRefresh()));
     this.registerEvent(workspace.on("window-open", (_workspaceWindow, openedWindow) => {
       this.mountDocument(openedWindow.document);
     }));
     this.registerEvent(workspace.on("window-close", (_workspaceWindow, closedWindow) => {
       this.unmountDocument(closedWindow.document);
     }));
-    this.registerEvent(this.host.app.vault.on("rename", () => this.applySettings()));
+    this.registerEvent(this.host.app.vault.on("rename", (file, oldPath) => {
+      void this.renameVisibilityPaths(file.path, oldPath);
+    }));
 
     this.register(() => {
       if (this.refreshFrame !== null) window.cancelAnimationFrame(this.refreshFrame);
@@ -72,6 +77,28 @@ export class DockController extends Component {
 
   app(): App {
     return this.host.app;
+  }
+
+  contextForDocument(document: Document): NoteContext | null {
+    const leaf = this.leafForDocument(document);
+    const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
+    if (!(candidate instanceof TFile)) return null;
+    const cache = this.host.app.metadataCache.getFileCache(candidate);
+    return {
+      path: candidate.path,
+      name: candidate.name,
+      basename: candidate.basename,
+      tags: cache ? getAllTags(cache) || [] : [],
+    };
+  }
+
+  dockVisible(document: Document): boolean {
+    const settings = this.settings();
+    return settings.enabled && dockVisibleForContext(
+      settings.includeRules,
+      settings.excludeRules,
+      this.contextForDocument(document),
+    );
   }
 
   resolveTarget(target: string): TFile | null {
@@ -116,6 +143,23 @@ export class DockController extends Component {
       return queue.shift() || item;
     });
     await this.host.saveSettings(false);
+    this.applySettings();
+  }
+
+  private async renameVisibilityPaths(newPath: string, oldPath: string): Promise<void> {
+    const rename = (value: string): string =>
+      value === oldPath || value.startsWith(`${oldPath}/`)
+        ? newPath + value.slice(oldPath.length)
+        : value;
+    let changed = false;
+    for (const rule of [...this.host.settings.includeRules, ...this.host.settings.excludeRules]) {
+      if (rule.matchType !== "path" && rule.matchType !== "folder") continue;
+      const value = rename(rule.matchValue);
+      if (value === rule.matchValue) continue;
+      rule.matchValue = value;
+      changed = true;
+    }
+    if (changed) await this.host.saveSettings(false);
     this.applySettings();
   }
 
@@ -217,7 +261,6 @@ class DockInstance extends Component {
   render(): void {
     const settings = this.controller.settings();
     this.renderVersion += 1;
-    this.root.hidden = !settings.enabled;
     this.root.dataset.position = settings.position;
     this.root.classList.toggle("is-auto-hide", settings.autoHide);
     this.root.classList.toggle("is-labels-hidden", !settings.showLabels);
@@ -227,6 +270,11 @@ class DockInstance extends Component {
     this.root.classList.toggle("is-trigger-hidden", !settings.showTrigger);
     this.root.classList.toggle("is-trigger-background-hidden", !settings.triggerShowBackground);
     this.root.classList.toggle("is-trigger-border-hidden", !settings.triggerShowBorder);
+    this.root.classList.toggle(
+      "is-trigger-area-background-hidden",
+      !settings.triggerAreaShowBackground,
+    );
+    this.root.classList.toggle("is-trigger-area-border-hidden", !settings.triggerAreaShowBorder);
 
     this.setRootVariables(settings);
     this.panel.replaceChildren();
@@ -236,13 +284,15 @@ class DockInstance extends Component {
 
     this.applyLayout(settings.position);
     this.clearMagnification();
+    if (!this.syncVisibility()) return;
     if (!settings.autoHide) this.setVisible(true);
     else this.setVisible(this.visible);
     this.refreshGeometryAndActiveState();
   }
 
   refreshGeometryAndActiveState(): void {
-    if (!this.isMounted() || this.root.hidden) return;
+    if (!this.isMounted() || !this.syncVisibility()) return;
+    if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
     this.positionAgainstRootPane();
     this.markActiveTarget();
   }
@@ -255,6 +305,10 @@ class DockInstance extends Component {
     style.setProperty("--ledge-padding", `${settings.padding}px`);
     style.setProperty("--ledge-radius", `${settings.radius}px`);
     style.setProperty("--ledge-trigger-size", `${settings.triggerSize}px`);
+    style.setProperty("--ledge-trigger-area-opacity", `${settings.triggerAreaSurfaceOpacity}%`);
+    style.setProperty("--ledge-trigger-area-angle", `${settings.triggerAreaGradientAngle}deg`);
+    style.setProperty("--ledge-trigger-area-radius", `${settings.triggerAreaRadius}px`);
+    style.setProperty("--ledge-trigger-area-border-width", `${settings.triggerAreaBorderWidth}px`);
     style.setProperty("--ledge-trigger-surface-thickness", `${settings.triggerSurfaceThickness}px`);
     style.setProperty("--ledge-trigger-opacity", `${settings.triggerSurfaceOpacity}%`);
     style.setProperty("--ledge-trigger-angle", `${settings.triggerGradientAngle}deg`);
@@ -276,6 +330,10 @@ class DockInstance extends Component {
     style.setProperty(
       "--ledge-trigger-border-color",
       settings.triggerBorderColor || "var(--background-modifier-border-hover)",
+    );
+    style.setProperty(
+      "--ledge-trigger-area-border-color",
+      settings.triggerAreaBorderColor || "var(--background-modifier-border-hover)",
     );
 
     if (settings.surfaceMode === "solid") {
@@ -299,6 +357,27 @@ class DockInstance extends Component {
       style.setProperty("--ledge-trigger-start", "var(--interactive-accent)");
       style.setProperty("--ledge-trigger-end", "var(--background-secondary)");
     }
+
+    if (settings.triggerAreaSurfaceMode === "solid") {
+      style.setProperty("--ledge-trigger-area-start", settings.triggerAreaSurfaceColor);
+      style.setProperty("--ledge-trigger-area-end", settings.triggerAreaSurfaceColor);
+    } else if (settings.triggerAreaSurfaceMode === "gradient") {
+      style.setProperty("--ledge-trigger-area-start", settings.triggerAreaGradientStart);
+      style.setProperty("--ledge-trigger-area-end", settings.triggerAreaGradientEnd);
+    } else {
+      style.setProperty("--ledge-trigger-area-start", "var(--background-primary)");
+      style.setProperty("--ledge-trigger-area-end", "var(--background-primary)");
+    }
+  }
+
+  private syncVisibility(): boolean {
+    const visibleInContext = this.controller.dockVisible(this.document);
+    this.root.hidden = !visibleInContext;
+    if (!visibleInContext) {
+      this.clearTimers();
+      this.setVisible(false);
+    }
+    return visibleInContext;
   }
 
   private createButton(item: DockItemSettings, version: number): HTMLButtonElement {

@@ -23,6 +23,7 @@ void test("release and repository documents exist", () => {
     "manifest.json",
     "styles.css",
     "README.md",
+    "ROADMAP.md",
     "LICENSE",
     "assets/buy-me-a-coffee.svg",
   ]) {
@@ -63,4 +64,20 @@ void test("edge trigger replaces the removed hot-corner interface", () => {
   assert.match(settingsTab, /heading: "Edge trigger"/);
   assert.match(settingsTab, /"Activation length"[\s\S]*"triggerLength"/);
   assert.match(styles, /--ledge-trigger-surface-thickness/);
+  assert.match(styles, /--ledge-trigger-area-opacity/);
+  assert.match(styles, /\.ledge-dock-root \.ledge-dock-trigger/);
+  assert.match(settingsTab, /"Activation area background style"/);
+});
+
+void test("visibility routing and preset roadmap are documented", () => {
+  const settingsTab = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const roadmap = fs.readFileSync("ROADMAP.md", "utf8");
+
+  assert.match(settingsTab, /heading: "Context visibility"/);
+  assert.match(settingsTab, /heading: include \? "Show Dock in" : "Hide Dock in"/);
+  assert.match(dock, /dockVisibleForContext/);
+  assert.match(dock, /metadataCache\.on\("changed"/);
+  assert.match(roadmap, /Phase 1 — Preset data model/);
+  assert.match(roadmap, /Context-based preset routing/);
 });

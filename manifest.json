@@ -3,7 +3,7 @@
   "name": "Ledge",
   "version": "1.0.0",
   "minAppVersion": "1.13.7",
-  "description": "Add a configurable edge dock with custom positions, icons, colors, reveal timing, and drag-and-drop ordering.",
+  "description": "Add a context-aware edge dock with visibility rules, custom trigger surfaces, icons, colors, reveal timing, and drag-and-drop ordering.",
   "author": "llocphann",
   "fundingUrl": "https://www.buymeacoffee.com/llocphann",
   "isDesktopOnly": true

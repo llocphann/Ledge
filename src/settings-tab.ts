@@ -9,8 +9,16 @@ import {
   type TFile,
 } from "obsidian";
 import type LedgePlugin from "./main";
-import { cloneDefaultSettings, createDockItem } from "./settings";
-import type { DockItemSettings, DockPosition, LedgeSettings, SurfaceMode } from "./types";
+import { cloneDefaultSettings, createDockItem, createVisibilityRule } from "./settings";
+import {
+  CONTEXT_MATCH_TYPES,
+  type ContextMatchType,
+  type DockItemSettings,
+  type DockPosition,
+  type DockVisibilityRule,
+  type LedgeSettings,
+  type SurfaceMode,
+} from "./types";
 
 const POSITION_LABELS: Record<DockPosition, string> = {
   left: "Left",
@@ -28,6 +36,7 @@ const FUNDING_URL = "https://www.buymeacoffee.com/llocphann";
 const SETTINGS_TABS = [
   { id: "layout", label: "Layout", icon: "layout-dashboard" },
   { id: "behavior", label: "Behavior", icon: "timer" },
+  { id: "visibility", label: "Visibility", icon: "list-filter" },
   { id: "trigger", label: "Trigger", icon: "mouse-pointer-2" },
   { id: "appearance", label: "Appearance", icon: "palette" },
   { id: "items", label: "Items", icon: "list" },
@@ -49,6 +58,7 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.tabNavigationDefinitions(),
       this.layoutDefinitions(),
       this.behaviorDefinitions(),
+      ...this.visibilityDefinitions(),
       this.triggerDefinitions(),
       this.appearanceDefinitions(),
       this.itemDefinitions(),
@@ -57,6 +67,11 @@ export class LedgeSettingTab extends PluginSettingTab {
   }
 
   getControlValue(key: string): unknown {
+    const visibilityKey = this.parseVisibilityRuleKey(key);
+    if (visibilityKey) {
+      const rule = this.findVisibilityRule(visibilityKey.kind, visibilityKey.id);
+      return rule?.[visibilityKey.field as keyof DockVisibilityRule];
+    }
     const itemKey = this.parseItemKey(key);
     if (itemKey) {
       const item = this.ledge.settings.items.find((candidate) => candidate.id === itemKey.id);
@@ -73,10 +88,22 @@ export class LedgeSettingTab extends PluginSettingTab {
     if (key === "triggerBorderColorEnabled") {
       return Boolean(this.ledge.settings.triggerBorderColor);
     }
+    if (key === "triggerAreaBorderColorEnabled") {
+      return Boolean(this.ledge.settings.triggerAreaBorderColor);
+    }
     return this.ledge.settings[key as keyof LedgeSettings];
   }
 
   async setControlValue(key: string, value: unknown): Promise<void> {
+    const visibilityKey = this.parseVisibilityRuleKey(key);
+    if (visibilityKey) {
+      const rule = this.findVisibilityRule(visibilityKey.kind, visibilityKey.id);
+      if (!rule) return;
+      this.setVisibilityRuleValue(rule, visibilityKey.field, value);
+      await this.ledge.saveSettings();
+      if (["matchType", "enabled"].includes(visibilityKey.field)) this.update();
+      return;
+    }
     const itemKey = this.parseItemKey(key);
     if (itemKey) {
       const item = this.ledge.settings.items.find((candidate) => candidate.id === itemKey.id);
@@ -95,6 +122,8 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.ledge.settings.borderColor = value === true ? "#64748b" : "";
     } else if (key === "triggerBorderColorEnabled") {
       this.ledge.settings.triggerBorderColor = value === true ? "#64748b" : "";
+    } else if (key === "triggerAreaBorderColorEnabled") {
+      this.ledge.settings.triggerAreaBorderColor = value === true ? "#64748b" : "";
     } else {
       this.setGlobalValue(key, value);
     }
@@ -110,6 +139,10 @@ export class LedgeSettingTab extends PluginSettingTab {
       "triggerShowBorder",
       "triggerSurfaceMode",
       "triggerBorderColorEnabled",
+      "triggerAreaShowBackground",
+      "triggerAreaShowBorder",
+      "triggerAreaSurfaceMode",
+      "triggerAreaBorderColorEnabled",
       "accentColorEnabled",
       "borderColorEnabled",
     ].includes(key)) {
@@ -251,8 +284,126 @@ export class LedgeSettingTab extends PluginSettingTab {
     };
   }
 
+  private visibilityDefinitions(): SettingDefinitionItem[] {
+    return [
+      {
+        type: "group",
+        heading: "Context visibility",
+        cls: "ledge-settings-panel-visibility",
+        items: [
+          {
+            name: "Rule priority",
+            desc: "With no enabled include rules, Ledge appears everywhere. Enabled include rules restrict where it may appear, and an enabled exclude rule always wins. Rules can match a note name, exact path, folder, or tag.",
+            searchable: false,
+          },
+        ],
+      },
+      this.visibilityRuleList("include"),
+      this.visibilityRuleList("exclude"),
+    ];
+  }
+
+  private visibilityRuleList(kind: "include" | "exclude"): SettingDefinitionItem {
+    const rules = kind === "include"
+      ? this.ledge.settings.includeRules
+      : this.ledge.settings.excludeRules;
+    const include = kind === "include";
+    return {
+      type: "list",
+      heading: include ? "Show Dock in" : "Hide Dock in",
+      cls: "ledge-settings-panel-visibility",
+      emptyState: include
+        ? "No include rules. The Dock is allowed everywhere unless excluded."
+        : "No exclude rules.",
+      items: rules.map((rule, index) => this.visibilityRulePage(rule, index, kind)),
+      addItem: {
+        name: include ? "Add include rule" : "Add exclude rule",
+        action: () => {
+          rules.push(createVisibilityRule(rules, kind));
+          void this.ledge.saveSettings().then(() => this.update());
+        },
+      },
+      onReorder: (oldIndex, newIndex) => {
+        const [rule] = rules.splice(oldIndex, 1);
+        if (!rule) return;
+        rules.splice(newIndex, 0, rule);
+        void this.ledge.saveSettings().then(() => this.update());
+      },
+      onDelete: (index) => {
+        rules.splice(index, 1);
+        void this.ledge.saveSettings().then(() => this.update());
+      },
+    };
+  }
+
+  private visibilityRulePage(
+    rule: DockVisibilityRule,
+    index: number,
+    kind: "include" | "exclude",
+  ): SettingDefinitionPage {
+    const key = (field: string): string => `visibility:${kind}:${rule.id}:${field}`;
+    return {
+      type: "page",
+      name: rule.matchValue || `${kind === "include" ? "Include" : "Exclude"} rule ${index + 1}`,
+      desc: kind === "include" ? "Allow the Dock in this context." : "Hide the Dock in this context.",
+      displayValue: () => rule.enabled ? CONTEXT_MATCH_TYPES[rule.matchType] : "Disabled",
+      status: () => !rule.enabled || rule.matchValue ? null : "warning",
+      items: [
+        {
+          name: "Enabled",
+          control: { type: "toggle", key: key("enabled") },
+        },
+        {
+          name: "Match by",
+          desc: "Tag rules also match nested tags. Folder rules include every descendant file.",
+          control: {
+            type: "dropdown",
+            key: key("matchType"),
+            options: CONTEXT_MATCH_TYPES,
+          },
+        },
+        {
+          name: "Exact file path",
+          desc: "Choose one file in the vault.",
+          control: {
+            type: "file",
+            key: key("matchValue"),
+            placeholder: "Folder/Note.md",
+          },
+          visible: () => rule.matchType === "path",
+        },
+        {
+          name: rule.matchType === "note"
+            ? "Note name"
+            : rule.matchType === "folder"
+              ? "Folder path"
+              : "Tag",
+          desc: rule.matchType === "note"
+            ? "The .md extension is optional."
+            : rule.matchType === "folder"
+              ? "Use a vault-relative folder path."
+              : "A leading # is optional.",
+          control: {
+            type: "text",
+            key: key("matchValue"),
+            placeholder: rule.matchType === "note"
+              ? "Homepage"
+              : rule.matchType === "folder"
+                ? "20_Personal_Life/25_Media_Tracker"
+                : "#media/movies",
+          },
+          visible: () => rule.matchType !== "path",
+        },
+      ],
+    };
+  }
+
   private triggerDefinitions(): SettingDefinitionItem {
     const enabled = (): boolean => this.ledge.settings.autoHide;
+    const areaBackgroundVisible = (): boolean => enabled()
+      && this.ledge.settings.triggerAreaShowBackground;
+    const areaBorderVisible = (): boolean => enabled()
+      && this.ledge.settings.triggerAreaShowBorder;
     const surfaceVisible = (): boolean => enabled() && this.ledge.settings.showTrigger;
     const backgroundVisible = (): boolean => surfaceVisible()
       && this.ledge.settings.triggerShowBackground;
@@ -268,12 +419,6 @@ export class LedgeSettingTab extends PluginSettingTab {
           name: "Edge trigger",
           desc: "This activation strip stays attached to the active root pane. It is used only while auto-hide is enabled.",
           searchable: false,
-        },
-        {
-          name: "Show trigger surface",
-          desc: "Hide only the visible indicator. The transparent activation area remains available so the dock can still be revealed.",
-          control: { type: "toggle", key: "showTrigger" },
-          visible: enabled,
         },
         {
           ...this.slider(
@@ -300,6 +445,115 @@ export class LedgeSettingTab extends PluginSettingTab {
           visible: enabled,
         },
         {
+          name: "Activation area",
+          desc: "The rectangle around the pill is the pointer-sensitive hitbox. When its background is transparent, the active pane or theme color shows through. These controls paint that outer area without changing its hover size.",
+          searchable: false,
+          visible: enabled,
+        },
+        {
+          name: "Show activation area background",
+          desc: "Draw a controllable background behind the pill instead of exposing the pane background directly.",
+          control: { type: "toggle", key: "triggerAreaShowBackground" },
+          visible: enabled,
+        },
+        {
+          name: "Activation area background style",
+          control: {
+            type: "dropdown",
+            key: "triggerAreaSurfaceMode",
+            options: {
+              theme: "Theme palette",
+              solid: "Solid color",
+              gradient: "Gradient",
+            },
+          },
+          visible: areaBackgroundVisible,
+        },
+        {
+          ...this.slider(
+            "Activation area opacity",
+            "Opacity of the background around the pill.",
+            "triggerAreaSurfaceOpacity",
+            0,
+            100,
+            1,
+            "%",
+          ),
+          visible: areaBackgroundVisible,
+        },
+        {
+          name: "Activation area solid color",
+          control: { type: "color", key: "triggerAreaSurfaceColor" },
+          visible: () => areaBackgroundVisible()
+            && this.ledge.settings.triggerAreaSurfaceMode === "solid",
+        },
+        {
+          name: "Activation area gradient start",
+          control: { type: "color", key: "triggerAreaGradientStart" },
+          visible: () => areaBackgroundVisible()
+            && this.ledge.settings.triggerAreaSurfaceMode === "gradient",
+        },
+        {
+          name: "Activation area gradient end",
+          control: { type: "color", key: "triggerAreaGradientEnd" },
+          visible: () => areaBackgroundVisible()
+            && this.ledge.settings.triggerAreaSurfaceMode === "gradient",
+        },
+        {
+          ...this.slider(
+            "Activation area gradient angle",
+            "Direction of the outer hitbox gradient.",
+            "triggerAreaGradientAngle",
+            0,
+            360,
+            1,
+            "°",
+          ),
+          visible: () => areaBackgroundVisible()
+            && this.ledge.settings.triggerAreaSurfaceMode === "gradient",
+        },
+        {
+          ...this.slider(
+            "Activation area radius",
+            "Rounding of the outer pointer-sensitive rectangle.",
+            "triggerAreaRadius",
+            0,
+            40,
+            1,
+            "px",
+          ),
+          visible: enabled,
+        },
+        {
+          name: "Show activation area border",
+          control: { type: "toggle", key: "triggerAreaShowBorder" },
+          visible: enabled,
+        },
+        {
+          ...this.slider(
+            "Activation area border width",
+            "Thickness of the outer hitbox outline.",
+            "triggerAreaBorderWidth",
+            0,
+            6,
+            1,
+            "px",
+          ),
+          visible: areaBorderVisible,
+        },
+        {
+          name: "Custom activation area border color",
+          desc: "Disable this option to use the active theme border color.",
+          control: { type: "toggle", key: "triggerAreaBorderColorEnabled" },
+          visible: areaBorderVisible,
+        },
+        {
+          name: "Activation area border color",
+          control: { type: "color", key: "triggerAreaBorderColor" },
+          visible: () => areaBorderVisible()
+            && Boolean(this.ledge.settings.triggerAreaBorderColor),
+        },
+        {
           ...this.slider(
             "Reveal delay",
             "Time spent hovering the trigger before the dock appears.",
@@ -321,6 +575,18 @@ export class LedgeSettingTab extends PluginSettingTab {
             50,
             "ms",
           ),
+          visible: enabled,
+        },
+        {
+          name: "Trigger pill",
+          desc: "The pill is the smaller visual indicator drawn inside the activation area.",
+          searchable: false,
+          visible: enabled,
+        },
+        {
+          name: "Show trigger pill",
+          desc: "Hide only the pill. The activation area remains available so the Dock can still be revealed.",
+          control: { type: "toggle", key: "showTrigger" },
           visible: enabled,
         },
         {
@@ -731,6 +997,40 @@ export class LedgeSettingTab extends PluginSettingTab {
     );
   }
 
+  private parseVisibilityRuleKey(
+    key: string,
+  ): { kind: "include" | "exclude"; id: string; field: string } | null {
+    const [prefix, kind, id, ...fieldParts] = key.split(":");
+    if (prefix !== "visibility" || (kind !== "include" && kind !== "exclude")) return null;
+    if (!id || fieldParts.length === 0) return null;
+    return { kind, id, field: fieldParts.join(":") };
+  }
+
+  private findVisibilityRule(
+    kind: "include" | "exclude",
+    id: string,
+  ): DockVisibilityRule | undefined {
+    const rules = kind === "include"
+      ? this.ledge.settings.includeRules
+      : this.ledge.settings.excludeRules;
+    return rules.find((rule) => rule.id === id);
+  }
+
+  private setVisibilityRuleValue(
+    rule: DockVisibilityRule,
+    field: string,
+    value: unknown,
+  ): void {
+    if (field === "enabled") rule.enabled = value === true;
+    else if (field === "matchType") {
+      rule.matchType = Object.keys(CONTEXT_MATCH_TYPES).includes(String(value))
+        ? value as ContextMatchType
+        : "path";
+    } else if (field === "matchValue") {
+      rule.matchValue = typeof value === "string" ? value : "";
+    }
+  }
+
   private parseItemKey(key: string): { id: string; field: string } | null {
     if (!key.startsWith("item:")) return null;
     const [, id, ...fieldParts] = key.split(":");
@@ -767,6 +1067,8 @@ export class LedgeSettingTab extends PluginSettingTab {
       "showDockBackground",
       "showDockBorder",
       "showTrigger",
+      "triggerAreaShowBackground",
+      "triggerAreaShowBorder",
       "triggerShowBackground",
       "triggerShowBorder",
     ].includes(key)) {
@@ -777,17 +1079,23 @@ export class LedgeSettingTab extends PluginSettingTab {
       settings.surfaceMode = value as SurfaceMode;
     } else if (key === "triggerSurfaceMode") {
       settings.triggerSurfaceMode = value as SurfaceMode;
+    } else if (key === "triggerAreaSurfaceMode") {
+      settings.triggerAreaSurfaceMode = value as SurfaceMode;
     } else if ([
       "itemSize", "iconSize", "gap", "padding", "radius", "edgeOffset", "triggerSize",
       "revealDelay", "hideDelay", "motionDuration", "magnificationScale", "neighborScale",
       "surfaceOpacity", "gradientAngle", "triggerLength", "triggerSurfaceThickness",
       "triggerSurfaceOpacity", "triggerGradientAngle", "triggerRadius", "triggerBorderWidth",
+      "triggerAreaSurfaceOpacity", "triggerAreaGradientAngle", "triggerAreaRadius",
+      "triggerAreaBorderWidth",
     ].includes(key)) {
       settings[key as "itemSize"] = Number(value);
     } else if ([
       "surfaceColor", "gradientStart", "gradientEnd", "accentColor", "borderColor",
       "triggerSurfaceColor", "triggerGradientStart", "triggerGradientEnd",
       "triggerBorderColor",
+      "triggerAreaSurfaceColor", "triggerAreaGradientStart", "triggerAreaGradientEnd",
+      "triggerAreaBorderColor",
     ].includes(key)) {
       settings[key as "surfaceColor"] = typeof value === "string" ? value : "";
     }

@@ -20,6 +20,22 @@ export type IconSource = (typeof ICON_SOURCES)[number];
 export const ICON_RENDER_MODES = ["tint", "original"] as const;
 export type IconRenderMode = (typeof ICON_RENDER_MODES)[number];
 
+export const CONTEXT_MATCH_TYPES = {
+  note: "Note name",
+  path: "Exact path",
+  folder: "Folder",
+  tag: "Tag",
+} as const;
+
+export type ContextMatchType = keyof typeof CONTEXT_MATCH_TYPES;
+
+export interface DockVisibilityRule {
+  id: string;
+  enabled: boolean;
+  matchType: ContextMatchType;
+  matchValue: string;
+}
+
 export interface DockItemSettings {
   id: string;
   enabled: boolean;
@@ -49,6 +65,17 @@ export interface LedgeSettings {
   showTrigger: boolean;
   triggerSize: number;
   triggerLength: number;
+  triggerAreaShowBackground: boolean;
+  triggerAreaShowBorder: boolean;
+  triggerAreaSurfaceMode: SurfaceMode;
+  triggerAreaSurfaceOpacity: number;
+  triggerAreaSurfaceColor: string;
+  triggerAreaGradientStart: string;
+  triggerAreaGradientEnd: string;
+  triggerAreaGradientAngle: number;
+  triggerAreaRadius: number;
+  triggerAreaBorderWidth: number;
+  triggerAreaBorderColor: string;
   triggerSurfaceThickness: number;
   triggerShowBackground: boolean;
   triggerShowBorder: boolean;
@@ -77,6 +104,8 @@ export interface LedgeSettings {
   gradientAngle: number;
   accentColor: string;
   borderColor: string;
+  includeRules: DockVisibilityRule[];
+  excludeRules: DockVisibilityRule[];
   items: DockItemSettings[];
 }
 

@@ -6,6 +6,13 @@
   --ledge-padding: 8px;
   --ledge-radius: 18px;
   --ledge-trigger-size: 14px;
+  --ledge-trigger-area-opacity: 100%;
+  --ledge-trigger-area-angle: 145deg;
+  --ledge-trigger-area-radius: 0;
+  --ledge-trigger-area-border-width: 1px;
+  --ledge-trigger-area-start: var(--background-primary);
+  --ledge-trigger-area-end: var(--background-primary);
+  --ledge-trigger-area-border-color: var(--background-modifier-border-hover);
   --ledge-trigger-surface-thickness: 5px;
   --ledge-trigger-opacity: 72%;
   --ledge-trigger-angle: 145deg;
@@ -45,7 +52,7 @@
   box-sizing: border-box;
 }
 
-.ledge-dock-trigger {
+.ledge-dock-root .ledge-dock-trigger {
   position: fixed;
   z-index: 1;
   min-width: 0;
@@ -53,10 +60,26 @@
   margin: 0;
   padding: 0;
   appearance: none;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  border: var(--ledge-trigger-area-border-width) solid
+    color-mix(in srgb, var(--ledge-trigger-area-border-color) 82%, transparent);
+  border-radius: var(--ledge-trigger-area-radius);
+  background:
+    linear-gradient(
+      var(--ledge-trigger-area-angle),
+      color-mix(
+        in srgb,
+        var(--ledge-trigger-area-start) var(--ledge-trigger-area-opacity),
+        transparent
+      ),
+      color-mix(
+        in srgb,
+        var(--ledge-trigger-area-end) var(--ledge-trigger-area-opacity),
+        transparent
+      )
+    );
   box-shadow: none;
+  color: inherit;
+  font: inherit;
   pointer-events: auto;
 }
 
@@ -95,6 +118,14 @@
 .ledge-dock-trigger:focus-visible {
   outline: 2px solid var(--ledge-accent);
   outline-offset: -2px;
+}
+
+.ledge-dock-root.is-trigger-area-background-hidden .ledge-dock-trigger {
+  background: transparent;
+}
+
+.ledge-dock-root.is-trigger-area-border-hidden .ledge-dock-trigger {
+  border-color: transparent;
 }
 
 .ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before {
@@ -676,6 +707,7 @@
 
 .ledge-settings-root:not([data-ledge-settings-tab="layout"]) .ledge-settings-panel-layout,
 .ledge-settings-root:not([data-ledge-settings-tab="behavior"]) .ledge-settings-panel-behavior,
+.ledge-settings-root:not([data-ledge-settings-tab="visibility"]) .ledge-settings-panel-visibility,
 .ledge-settings-root:not([data-ledge-settings-tab="trigger"]) .ledge-settings-panel-trigger,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
 .ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
