@@ -130,6 +130,14 @@ function stringValue(value: unknown, fallback = "", maximumLength = 240): string
   return typeof value === "string" ? value.trim().slice(0, maximumLength) : fallback;
 }
 
+function colorValue(value: unknown, fallback = ""): string {
+  const color = stringValue(value, fallback, 16);
+  if (!color) return "";
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color)
+    ? color
+    : fallback;
+}
+
 function enumValue<T extends string>(value: unknown, values: readonly T[], fallback: T): T {
   return typeof value === "string" && values.includes(value as T) ? value as T : fallback;
 }
@@ -160,9 +168,9 @@ function normalizeItem(value: unknown, index: number, usedIds: Set<string>): Doc
     icon: stringValue(source.icon, "circle", 500),
     iconRenderMode: enumValue<IconRenderMode>(source.iconRenderMode, ICON_RENDER_MODES, "tint"),
     iconSize: clamp(source.iconSize, 0, 0, 96),
-    iconColor: stringValue(source.iconColor, "", 120),
-    tileGradientStart: stringValue(source.tileGradientStart, "", 120),
-    tileGradientEnd: stringValue(source.tileGradientEnd, "", 120),
+    iconColor: colorValue(source.iconColor),
+    tileGradientStart: colorValue(source.tileGradientStart),
+    tileGradientEnd: colorValue(source.tileGradientEnd),
   };
 }
 
@@ -247,20 +255,17 @@ export function normalizeSettings(value: unknown): LedgeSettings {
       0,
       100,
     ),
-    triggerAreaSurfaceColor: stringValue(
+    triggerAreaSurfaceColor: colorValue(
       source.triggerAreaSurfaceColor,
       DEFAULT_SETTINGS.triggerAreaSurfaceColor,
-      120,
     ),
-    triggerAreaGradientStart: stringValue(
+    triggerAreaGradientStart: colorValue(
       source.triggerAreaGradientStart,
       DEFAULT_SETTINGS.triggerAreaGradientStart,
-      120,
     ),
-    triggerAreaGradientEnd: stringValue(
+    triggerAreaGradientEnd: colorValue(
       source.triggerAreaGradientEnd,
       DEFAULT_SETTINGS.triggerAreaGradientEnd,
-      120,
     ),
     triggerAreaGradientAngle: clamp(
       source.triggerAreaGradientAngle,
@@ -280,10 +285,9 @@ export function normalizeSettings(value: unknown): LedgeSettings {
       0,
       6,
     ),
-    triggerAreaBorderColor: stringValue(
+    triggerAreaBorderColor: colorValue(
       source.triggerAreaBorderColor,
       DEFAULT_SETTINGS.triggerAreaBorderColor,
-      120,
     ),
     triggerSurfaceThickness: clamp(
       source.triggerSurfaceThickness,
@@ -310,20 +314,17 @@ export function normalizeSettings(value: unknown): LedgeSettings {
       0,
       100,
     ),
-    triggerSurfaceColor: stringValue(
+    triggerSurfaceColor: colorValue(
       source.triggerSurfaceColor ?? source.hotCornerSurfaceColor,
       DEFAULT_SETTINGS.triggerSurfaceColor,
-      120,
     ),
-    triggerGradientStart: stringValue(
+    triggerGradientStart: colorValue(
       source.triggerGradientStart ?? source.hotCornerGradientStart,
       DEFAULT_SETTINGS.triggerGradientStart,
-      120,
     ),
-    triggerGradientEnd: stringValue(
+    triggerGradientEnd: colorValue(
       source.triggerGradientEnd ?? source.hotCornerGradientEnd,
       DEFAULT_SETTINGS.triggerGradientEnd,
-      120,
     ),
     triggerGradientAngle: clamp(
       source.triggerGradientAngle ?? source.hotCornerGradientAngle,
@@ -343,10 +344,9 @@ export function normalizeSettings(value: unknown): LedgeSettings {
       0,
       6,
     ),
-    triggerBorderColor: stringValue(
+    triggerBorderColor: colorValue(
       source.triggerBorderColor ?? source.hotCornerBorderColor,
       DEFAULT_SETTINGS.triggerBorderColor,
-      120,
     ),
     revealDelay: clamp(source.revealDelay, DEFAULT_SETTINGS.revealDelay, 0, 3000),
     hideDelay: clamp(source.hideDelay, DEFAULT_SETTINGS.hideDelay, 0, 10000),
@@ -361,12 +361,12 @@ export function normalizeSettings(value: unknown): LedgeSettings {
     showDockBorder: booleanValue(source.showDockBorder, DEFAULT_SETTINGS.showDockBorder),
     surfaceMode: enumValue<SurfaceMode>(source.surfaceMode, SURFACE_MODES, DEFAULT_SETTINGS.surfaceMode),
     surfaceOpacity: clamp(source.surfaceOpacity, DEFAULT_SETTINGS.surfaceOpacity, 0, 100),
-    surfaceColor: stringValue(source.surfaceColor, DEFAULT_SETTINGS.surfaceColor, 120),
-    gradientStart: stringValue(source.gradientStart, DEFAULT_SETTINGS.gradientStart, 120),
-    gradientEnd: stringValue(source.gradientEnd, DEFAULT_SETTINGS.gradientEnd, 120),
+    surfaceColor: colorValue(source.surfaceColor, DEFAULT_SETTINGS.surfaceColor),
+    gradientStart: colorValue(source.gradientStart, DEFAULT_SETTINGS.gradientStart),
+    gradientEnd: colorValue(source.gradientEnd, DEFAULT_SETTINGS.gradientEnd),
     gradientAngle: clamp(source.gradientAngle, DEFAULT_SETTINGS.gradientAngle, 0, 360),
-    accentColor: stringValue(source.accentColor, DEFAULT_SETTINGS.accentColor, 120),
-    borderColor: stringValue(source.borderColor, DEFAULT_SETTINGS.borderColor, 120),
+    accentColor: colorValue(source.accentColor, DEFAULT_SETTINGS.accentColor),
+    borderColor: colorValue(source.borderColor, DEFAULT_SETTINGS.borderColor),
     includeRules: normalizeVisibilityRules(source.includeRules, "include"),
     excludeRules: normalizeVisibilityRules(source.excludeRules, "exclude"),
     items,

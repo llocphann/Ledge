@@ -10,6 +10,7 @@ import {
 } from "obsidian";
 import type LedgePlugin from "./main";
 import { cloneDefaultSettings, createDockItem, createVisibilityRule } from "./settings";
+import { parseLedgeSettingsImport, serializeLedgeSettings } from "./settings-transfer";
 import {
   CONTEXT_MATCH_TYPES,
   type ContextMatchType,
@@ -33,6 +34,7 @@ const POSITION_LABELS: Record<DockPosition, string> = {
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
 const FUNDING_URL = "https://www.buymeacoffee.com/llocphann";
+const MAX_IMPORT_BYTES = 1024 * 1024;
 const SETTINGS_TABS = [
   { id: "layout", label: "Layout", icon: "layout-dashboard" },
   { id: "behavior", label: "Behavior", icon: "timer" },
@@ -40,6 +42,7 @@ const SETTINGS_TABS = [
   { id: "trigger", label: "Trigger", icon: "mouse-pointer-2" },
   { id: "appearance", label: "Appearance", icon: "palette" },
   { id: "items", label: "Items", icon: "list" },
+  { id: "data", label: "Data", icon: "database-backup" },
   { id: "about", label: "About", icon: "info" },
 ] as const;
 
@@ -62,6 +65,7 @@ export class LedgeSettingTab extends PluginSettingTab {
       this.triggerDefinitions(),
       this.appearanceDefinitions(),
       this.itemDefinitions(),
+      this.dataDefinitions(),
       this.aboutDefinitions(),
     ];
   }
@@ -814,9 +818,48 @@ export class LedgeSettingTab extends PluginSettingTab {
         void this.ledge.saveSettings().then(() => this.update());
       },
       onDelete: (index) => {
-        this.ledge.settings.items.splice(index, 1);
-        void this.ledge.saveSettings().then(() => this.update());
+        const item = this.ledge.settings.items[index];
+        if (item) this.deleteDockItem(item.id);
       },
+    };
+  }
+
+  private dataDefinitions(): SettingDefinitionItem {
+    return {
+      type: "group",
+      heading: "Backup & transfer",
+      cls: "ledge-settings-panel-data",
+      items: [
+        {
+          name: "Export settings",
+          desc: "Download a versioned JSON backup containing layout, trigger, visibility, and Dock item settings.",
+          render: (setting) => {
+            setting.addButton((button) =>
+              button
+                .setButtonText("Export")
+                .setIcon("download")
+                .onClick(() => this.exportSettings()),
+            );
+          },
+        },
+        {
+          name: "Import settings",
+          desc: "Replace the current configuration with a validated Ledge JSON backup. Invalid and unsupported files are rejected.",
+          render: (setting) => {
+            setting.addButton((button) =>
+              button
+                .setButtonText("Import")
+                .setIcon("upload")
+                .onClick(() => this.chooseImportFile()),
+            );
+          },
+        },
+        {
+          name: "Import safety",
+          desc: "Imports are limited to 1 MB and normalized before use. Ledge caps imported Dock items and visibility rules to prevent oversized configurations from degrading the workspace.",
+          searchable: false,
+        },
+      ],
     };
   }
 
@@ -961,6 +1004,19 @@ export class LedgeSettingTab extends PluginSettingTab {
           control: { type: "color", key: key("tileGradientEnd") },
           visible: () => Boolean(item.tileGradientStart || item.tileGradientEnd),
         },
+        {
+          name: "Delete dock item",
+          desc: "Remove this shortcut from Ledge.",
+          render: (setting) => {
+            setting.addButton((button) =>
+              button
+                .setButtonText("Delete item")
+                .setIcon("trash-2")
+                .setDestructive()
+                .onClick(() => this.deleteDockItem(item.id)),
+            );
+          },
+        },
       ],
     };
   }
@@ -1098,6 +1154,63 @@ export class LedgeSettingTab extends PluginSettingTab {
       "triggerAreaBorderColor",
     ].includes(key)) {
       settings[key as "surfaceColor"] = typeof value === "string" ? value : "";
+    }
+  }
+
+  private deleteDockItem(id: string): void {
+    const items = this.ledge.settings.items.filter((item) => item.id !== id);
+    if (items.length === this.ledge.settings.items.length) return;
+    this.ledge.settings.items = items;
+    void this.ledge.saveSettings().then(() => this.update());
+  }
+
+  private exportSettings(): void {
+    const text = serializeLedgeSettings(this.ledge.settings, this.ledge.manifest.version);
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = this.containerEl.createEl("a");
+    link.href = url;
+    link.download = `ledge-settings-${new Date().toISOString().slice(0, 10)}.json`;
+    link.hidden = true;
+    link.click();
+    window.setTimeout(() => {
+      link.remove();
+      URL.revokeObjectURL(url);
+    }, 0);
+    new Notice("Ledge settings exported.");
+  }
+
+  private chooseImportFile(): void {
+    const input = this.containerEl.createEl("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.hidden = true;
+    const cleanup = (): void => input.remove();
+    input.addEventListener("cancel", cleanup, { once: true });
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) {
+        cleanup();
+        return;
+      }
+      void this.importSettings(file).finally(cleanup);
+    }, { once: true });
+    input.click();
+  }
+
+  private async importSettings(file: File): Promise<void> {
+    if (file.size > MAX_IMPORT_BYTES) {
+      new Notice("Ledge settings import is limited to one megabyte.");
+      return;
+    }
+    try {
+      this.ledge.settings = parseLedgeSettingsImport(await file.text());
+      await this.ledge.saveSettings();
+      this.update();
+      new Notice("Ledge settings imported.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown import error.";
+      new Notice(`Ledge could not import settings: ${message}`);
     }
   }
 

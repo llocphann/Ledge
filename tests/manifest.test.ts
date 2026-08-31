@@ -81,3 +81,13 @@ void test("visibility routing and preset roadmap are documented", () => {
   assert.match(roadmap, /Phase 1 — Preset data model/);
   assert.match(roadmap, /Context-based preset routing/);
 });
+
+void test("Dock item pages expose a visible delete control and runtime work is event driven", () => {
+  const settings = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const dock = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(settings, /name: "Delete dock item"/);
+  assert.match(settings, /\.setDestructive\(\)/);
+  assert.match(settings, /heading: "Backup & transfer"/);
+  assert.doesNotMatch(dock, /setInterval\(|MutationObserver/);
+});

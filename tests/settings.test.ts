@@ -159,3 +159,20 @@ void test("visibility rules normalize paths, tags, and duplicate IDs", () => {
   assert.equal(settings.includeRules[1]?.matchValue, "20_Personal_Life");
   assert.equal(settings.excludeRules[0]?.matchValue, "Homepage");
 });
+
+void test("imported CSS colors are restricted to color values", () => {
+  const settings = normalizeSettings({
+    surfaceColor: "url(https://example.com/tracker.png)",
+    accentColor: "red; background:url(https://example.com/x)",
+    items: [{
+      id: "unsafe",
+      iconColor: "url(https://example.com/icon)",
+      tileGradientStart: "#123456",
+    }],
+  });
+
+  assert.equal(settings.surfaceColor, DEFAULT_SETTINGS.surfaceColor);
+  assert.equal(settings.accentColor, "");
+  assert.equal(settings.items[0]?.iconColor, "");
+  assert.equal(settings.items[0]?.tileGradientStart, "#123456");
+});

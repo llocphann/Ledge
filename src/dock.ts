@@ -44,15 +44,26 @@ export class DockController extends Component {
     this.registerEvent(workspace.on("layout-change", () => this.scheduleRefresh()));
     this.registerEvent(workspace.on("active-leaf-change", () => this.scheduleRefresh()));
     this.registerEvent(workspace.on("file-open", () => this.scheduleRefresh()));
-    this.registerEvent(this.host.app.metadataCache.on("changed", () => this.scheduleRefresh()));
+    this.registerEvent(this.host.app.metadataCache.on("changed", (file) => {
+      if (this.isActiveContextFile(file)) this.scheduleRefresh();
+    }));
     this.registerEvent(workspace.on("window-open", (_workspaceWindow, openedWindow) => {
       this.mountDocument(openedWindow.document);
     }));
     this.registerEvent(workspace.on("window-close", (_workspaceWindow, closedWindow) => {
       this.unmountDocument(closedWindow.document);
     }));
+    this.registerEvent(this.host.app.vault.on("create", (file) => {
+      this.refreshIfConfiguredPath(file.path);
+    }));
+    this.registerEvent(this.host.app.vault.on("modify", (file) => {
+      this.refreshIfConfiguredPath(file.path);
+    }));
+    this.registerEvent(this.host.app.vault.on("delete", (file) => {
+      this.refreshIfConfiguredPath(file.path);
+    }));
     this.registerEvent(this.host.app.vault.on("rename", (file, oldPath) => {
-      void this.renameVisibilityPaths(file.path, oldPath);
+      void this.renameConfiguredPaths(file.path, oldPath);
     }));
 
     this.register(() => {
@@ -146,7 +157,7 @@ export class DockController extends Component {
     this.applySettings();
   }
 
-  private async renameVisibilityPaths(newPath: string, oldPath: string): Promise<void> {
+  private async renameConfiguredPaths(newPath: string, oldPath: string): Promise<void> {
     const rename = (value: string): string =>
       value === oldPath || value.startsWith(`${oldPath}/`)
         ? newPath + value.slice(oldPath.length)
@@ -159,8 +170,37 @@ export class DockController extends Component {
       rule.matchValue = value;
       changed = true;
     }
+    for (const item of this.host.settings.items) {
+      const target = rename(item.target);
+      if (target !== item.target) {
+        item.target = target;
+        changed = true;
+      }
+      if (item.iconSource !== "vault") continue;
+      const icon = rename(item.icon);
+      if (icon !== item.icon) {
+        item.icon = icon;
+        changed = true;
+      }
+    }
     if (changed) await this.host.saveSettings(false);
     this.applySettings();
+  }
+
+  private isActiveContextFile(file: TFile): boolean {
+    for (const document of this.instances.keys()) {
+      const leaf = this.leafForDocument(document);
+      const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
+      if (candidate instanceof TFile && candidate.path === file.path) return true;
+    }
+    return false;
+  }
+
+  private refreshIfConfiguredPath(path: string): void {
+    const configured = this.host.settings.items.some((item) =>
+      normalizePath(item.target) === path
+      || (item.iconSource === "vault" && normalizePath(item.icon) === path));
+    if (configured) this.applySettings();
   }
 
   private isRootLeafForDocument(leaf: WorkspaceLeaf | null, document: Document): boolean {

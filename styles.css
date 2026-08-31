@@ -711,6 +711,7 @@
 .ledge-settings-root:not([data-ledge-settings-tab="trigger"]) .ledge-settings-panel-trigger,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
 .ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
+.ledge-settings-root:not([data-ledge-settings-tab="data"]) .ledge-settings-panel-data,
 .ledge-settings-root:not([data-ledge-settings-tab="about"]) .ledge-settings-panel-about {
   display: none;
 }

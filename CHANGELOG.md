@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 1.1.0
+
+- Add a permanently visible destructive button to every Dock item page.
+- Add validated, schema-versioned JSON settings import and export in a dedicated Data tab.
+- Restrict imported custom colors to safe CSS color values.
+- Refresh tag-based visibility only for active-note metadata changes.
+- Refresh configured targets and icons when their vault files change, and preserve their paths after renames.
+- Document runtime costs and import safety limits.
+
 ## 1.0.0
 
 - Add independent background, gradient, opacity, radius, and border controls for the full trigger activation area.
