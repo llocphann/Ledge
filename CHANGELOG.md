@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Render the trigger pill with square 90-degree geometry at all four corner positions.
+
 ## 1.1.1
 
 - Remove the legacy browser-storage Dock-order migration so all persistent settings use Obsidian's plugin data API.

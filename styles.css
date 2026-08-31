@@ -183,6 +183,7 @@
 .ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {
   width: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
   height: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
+  border-radius: 0;
 }
 
 .ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
@@ -190,7 +191,6 @@
   left: 0;
   border-top: 0;
   border-left: 0;
-  border-radius: 0 0 var(--ledge-trigger-radius) 0;
 }
 
 .ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
@@ -198,7 +198,6 @@
   right: 0;
   border-top: 0;
   border-right: 0;
-  border-radius: 0 0 0 var(--ledge-trigger-radius);
 }
 
 .ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
@@ -206,7 +205,6 @@
   left: 0;
   border-bottom: 0;
   border-left: 0;
-  border-radius: 0 var(--ledge-trigger-radius) 0 0;
 }
 
 .ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
@@ -214,7 +212,6 @@
   bottom: 0;
   border-right: 0;
   border-bottom: 0;
-  border-radius: var(--ledge-trigger-radius) 0 0 0;
 }
 
 .ledge-dock-panel {
