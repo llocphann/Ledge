@@ -69,17 +69,25 @@ void test("edge trigger replaces the removed hot-corner interface", () => {
   assert.match(settingsTab, /"Activation area background style"/);
 });
 
-void test("visibility routing and preset roadmap are documented", () => {
+void test("visibility rules and the multi-Dock roadmap are documented", () => {
   const settingsTab = fs.readFileSync("src/settings-tab.ts", "utf8");
   const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const multiDock = fs.readFileSync("src/multi-dock.ts", "utf8");
+  const settings = fs.readFileSync("src/settings.ts", "utf8");
   const roadmap = fs.readFileSync("ROADMAP.md", "utf8");
+  const readme = fs.readFileSync("README.md", "utf8");
 
   assert.match(settingsTab, /heading: "Context visibility"/);
   assert.match(settingsTab, /heading: include \? "Show Dock in" : "Hide Dock in"/);
   assert.match(dock, /dockVisibleForContext/);
   assert.match(dock, /metadataCache\.on\("changed"/);
-  assert.match(roadmap, /Phase 1 — Preset data model/);
-  assert.match(roadmap, /Context-based preset routing/);
+  assert.match(multiDock, /class MultiDockController/);
+  assert.match(settings, /availableDockPositions/);
+  assert.match(roadmap, /Current foundation/);
+  assert.match(roadmap, /Exclusive placement/);
+  assert.match(roadmap, /Context routing extensions/);
+  assert.match(readme, /Up to eight named Dock presets/);
+  assert.match(readme, /position already used by another preset is removed/);
 });
 
 void test("Dock item pages expose a visible delete control and runtime work is event driven", () => {
