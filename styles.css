@@ -83,6 +83,7 @@
   pointer-events: auto;
 }
 
+/* stylelint-disable no-descending-specificity -- stateful corner trigger pseudo-elements intentionally share geometry */
 .ledge-dock-trigger::before,
 .ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {
   content: "";
@@ -222,6 +223,7 @@
     inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),
     0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);
 }
+/* stylelint-enable no-descending-specificity */
 
 .ledge-dock-panel {
   --ledge-arm-thickness: calc(var(--ledge-item-size) + var(--ledge-padding) * 2);
