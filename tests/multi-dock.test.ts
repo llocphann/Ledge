@@ -29,7 +29,7 @@ void test("every dock-scoped settings tab exposes the same dock preset context",
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
   for (const section of ["layout", "behavior", "visibility", "trigger", "appearance", "items"]) {
-    assert.match(source, new RegExp(`\\b${section}: \\\"ledge-settings-panel-${section}\\\"`));
+    assert.match(source, new RegExp(`\\b${section}: "ledge-settings-panel-${section}"`));
   }
   assert.match(source, /definitions\.push\(this\.dockPresetListDefinitions\(section\)\)/);
   assert.match(source, /Every preset keeps its own/);
