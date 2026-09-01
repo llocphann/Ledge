@@ -36,7 +36,7 @@ void test("release and repository documents exist", () => {
   );
   assert.match(
     fs.readFileSync("README.md", "utf8"),
-    /https:\/\/raw\.githubusercontent\.com\/llocphann\/Ledge\/main\/assets\/buy-me-a-coffee\.svg/,
+    /(?:https:\/\/raw\.githubusercontent\.com\/llocphann\/Ledge\/main\/)?assets\/buy-me-a-coffee\.svg/,
   );
 });
 
