@@ -24,15 +24,26 @@ Ledge adds configurable navigation docks to the edges and corners of your Obsidi
 - Pointer drag-and-drop plus `Alt` + arrow keyboard reordering.
 - Same-leaf navigation that does not open an extra tab.
 - Pop-out window support with automatic lifecycle cleanup.
-- Tabbed settings for faster navigation between layout, behavior, appearance, items, and support.
+- Dock-first settings that keep every Dock-specific option inside one preset context.
 
 ## Configure Ledge
 
-Open **Settings → Community plugins → Ledge**. Every Dock-scoped section — **Layout**, **Behavior**, **Visibility**, **Trigger**, **Appearance**, and **Items** — shows the Dock preset list so it is always clear which Dock you are editing. Choosing another Dock in any of those sections switches the editing context to that preset, and every preset keeps its own settings and Dock items.
+Open **Settings → Community plugins → Ledge**. The top level contains only **Docks**, **Data**, and **About**. This separates settings that belong to one Dock from plugin-wide backup and support controls.
 
-In **Layout**, the selected Dock card expands its layout controls directly inside the card: name, enabled state, position, item size, icon size, gap, padding, corner radius, and edge offset. Re-rendering the settings page replaces the existing expanded body instead of appending another copy. Dock cards keep the same neutral appearance whether selected or not; the chevron indicates the current editing context without accent-border or background highlighting.
+Open a Dock under **Docks**, then choose one of its sections:
 
-Use **Add dock** to create another Dock or the copy action on a Dock card to duplicate it. Every preset receives one of the eight available positions. A position already used by another preset is removed from that Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
+- **Items** — shortcuts, target paths, built-in or vault icons, and per-item overrides;
+- **Layout** — enabled state, exclusive position, item/icon size, gap, padding, radius, and edge offset;
+- **Behavior** — auto-hide, motion, magnification, and labels;
+- **Visibility** — include/exclude context rules;
+- **Trigger** — activation area, reveal timing, and trigger-pill appearance;
+- **Appearance** — Dock surface, border, accent, and gradient controls.
+
+**Items** opens first because adding and maintaining shortcuts is the most common Dock task. Switching to another Dock changes the whole editing context, so Items, Layout, Behavior, Visibility, Trigger, and Appearance always belong to that one preset. The Dock row itself stays visually neutral; the chevron communicates which preset is open without adding a focus border or background highlight.
+
+Use **Add dock** to create another Dock or the copy action on a Dock row to duplicate it. Every preset receives one of the eight available positions. A position already used by another preset is removed from that Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
+
+For the straight **Top** and **Bottom** positions, Ledge anchors the Dock and its trigger to the active view's content area instead of the top or bottom of the entire root workspace. This keeps a Top Dock aligned with the note, Base, canvas, or other active view when panes are split. Left, right, and the four corner positions keep their existing root-pane placement behavior.
 
 Existing single-Dock configurations are migrated automatically into **Dock 1** without changing their items, position, visibility rules, trigger, or appearance settings.
 
