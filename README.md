@@ -28,7 +28,7 @@ Ledge adds configurable navigation docks to the edges and corners of your Obsidi
 
 ## Configure Ledge
 
-Open **Settings → Community plugins → Ledge**. The top level contains only **Docks**, **Data**, and **About**. This separates settings that belong to one Dock from plugin-wide backup and support controls.
+Open **Settings → Community plugins → Ledge**. The top level contains **Docks** and **Data**. About is not a separate destination: a shared **About** footer stays at the bottom of every settings view and reads the current plugin **Version** and **Author** directly from `manifest.json`, alongside the existing restore-defaults and support actions.
 
 Open a Dock under **Docks**, then choose one of its sections:
 
