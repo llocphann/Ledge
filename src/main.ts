@@ -1,6 +1,7 @@
 import { Notice, Plugin } from "obsidian";
 import { DockController } from "./dock";
 import { LedgeIconLibrarySettingTab } from "./icon-library-setting-tab";
+import { ensureIconifyIcons } from "./icon-provider";
 import { hasLegacyHotCornerSettings, normalizeSettings } from "./settings";
 import type { LedgeSettings } from "./types";
 
@@ -15,6 +16,14 @@ export default class LedgePlugin extends Plugin {
     this.settings = normalizeSettings(storedSettings);
     if (shouldPersistTriggerMigration) await this.saveData(this.settings);
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
+
+    void ensureIconifyIcons(
+      this.settings.items
+        .filter((item) => item.iconSource === "lucide")
+        .map((item) => item.icon),
+    ).then(() => {
+      this.controller?.applySettings();
+    });
 
     this.addCommand({
       id: "toggle-dock",
