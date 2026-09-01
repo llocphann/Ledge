@@ -237,7 +237,9 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       ? this.activeDockSection
       : this.activeWorkspaceTab;
     this.containerEl.dataset.ledgeSettingsTab = renderedTab;
-    for (const workspace of this.containerEl.querySelectorAll<HTMLElement>(".ledge-dock-workspace")) {
+    const workspaces = Array.from(this.containerEl.querySelectorAll(".ledge-dock-workspace"));
+    for (const workspace of workspaces) {
+      if (!(workspace instanceof HTMLElement)) continue;
       workspace.hidden = this.activeWorkspaceTab !== "docks";
     }
   }
@@ -366,7 +368,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
     new Setting(container)
       .setName("Preset name")
-      .setDesc("Name used to identify this Dock throughout Ledge settings.")
+      .setDesc("Name used to identify this preset throughout the plugin.")
       .addText((text) => {
         text
           .setPlaceholder("Dock 1")
@@ -384,7 +386,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   private renderDockSectionNavigation(container: HTMLElement): void {
     const navSetting = new Setting(container)
       .setName("Dock settings")
-      .setDesc("Items are the shortcuts in this Dock. The remaining sections control only this Dock.");
+      .setDesc("Items are the shortcuts in this dock. The remaining sections control only this dock.");
     const tabList = navSetting.controlEl.createDiv({ cls: "ledge-settings-tabs" });
     tabList.setAttribute("role", "tablist");
     tabList.setAttribute("aria-label", "Dock settings sections");
