@@ -79,6 +79,12 @@ export function exportIconifyCache(): IconCacheData {
   return serializeIconCache(cachedIconBodies);
 }
 
+export function cachedIconifyChoices(): BuiltInIconChoice[] {
+  return [...cachedIconBodies.keys()]
+    .map((id) => ({ id, name: iconDisplayName(id) }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 export async function ensureIconifyIcons(iconIds: string[]): Promise<void> {
   const grouped = new Map<IconifyPrefix, string[]>();
 
