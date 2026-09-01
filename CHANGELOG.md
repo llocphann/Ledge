@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
+- Replace the multi-Dock preset dropdown with a card list in Layout: each Dock is visible at a glance, the selected card expands its full layout settings, and the remaining settings tabs continue editing that selected Dock.
 - Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
 - Migrate the existing single-Dock configuration into `Dock 1` automatically without losing its layout, items, visibility rules, trigger, or appearance settings.
 - Upgrade settings export schema to v2 for multi-Dock backups while keeping schema-v1 imports compatible.
@@ -10,6 +11,7 @@
 - Load the additional open-source icon collections from Iconify on demand instead of bundling thousands of SVG files into `main.js`.
 - Persist external built-in icon choices retained by Dock items in Ledge plugin data and restore them before Dock startup, so they continue to render offline after reloads and after switching away from and back to Icon in vault.
 - Switch the Dock item icon control with its source: Built-in icon shows the icon picker, Icon in vault shows the file path and image-rendering controls, and each source preserves its previous value when switching back and forth.
+- Keep remembered Icon in vault paths synchronized when their files or parent folders are renamed, even while the item is temporarily using a built-in icon.
 - Render the trigger pill with square 90-degree geometry at all four corner positions.
 - Use Node.js 22 for development and CI tooling.
 
