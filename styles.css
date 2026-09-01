@@ -83,7 +83,8 @@
   pointer-events: auto;
 }
 
-.ledge-dock-trigger::before {
+.ledge-dock-trigger::before,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {
   content: "";
   position: absolute;
   border: var(--ledge-trigger-border-width) solid
@@ -107,7 +108,10 @@
 
 .ledge-dock-trigger:hover::before,
 .ledge-dock-trigger:focus-visible::before,
-.ledge-dock-trigger.is-visible::before {
+.ledge-dock-trigger.is-visible::before,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:hover::after,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:focus-visible::after,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger.is-visible::after {
   filter: brightness(1.14);
   opacity: 1;
   box-shadow:
@@ -128,17 +132,20 @@
   border-color: transparent;
 }
 
-.ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before {
+.ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-hidden[data-position*="-"] .ledge-dock-trigger::after {
   opacity: 0;
 }
 
-.ledge-dock-root.is-trigger-background-hidden .ledge-dock-trigger::before {
+.ledge-dock-root.is-trigger-background-hidden .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden[data-position*="-"] .ledge-dock-trigger::after {
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
 }
 
-.ledge-dock-root.is-trigger-border-hidden .ledge-dock-trigger::before {
+.ledge-dock-root.is-trigger-border-hidden .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger::after {
   border-color: transparent;
 }
 
@@ -181,37 +188,39 @@
 }
 
 .ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {
-  width: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
-  height: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));
-  border-radius: 0;
+  width: 72%;
+  height: min(100%, var(--ledge-trigger-surface-thickness));
+  border-radius: var(--ledge-trigger-radius);
 }
 
-.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {
+  width: min(100%, var(--ledge-trigger-surface-thickness));
+  height: 72%;
+  border-radius: var(--ledge-trigger-radius);
+}
+
+.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before,
+.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::after {
   top: 0;
   left: 0;
-  border-top: 0;
-  border-left: 0;
 }
 
-.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
+.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before,
+.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::after {
   top: 0;
   right: 0;
-  border-top: 0;
-  border-right: 0;
 }
 
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
+.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before,
+.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::after {
   bottom: 0;
   left: 0;
-  border-bottom: 0;
-  border-left: 0;
 }
 
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
+.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before,
+.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {
   right: 0;
   bottom: 0;
-  border-right: 0;
-  border-bottom: 0;
 }
 
 .ledge-dock-panel {

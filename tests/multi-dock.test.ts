@@ -67,14 +67,26 @@ void test("About stays at the bottom and uses manifest metadata", () => {
   assert.match(source, /name: "Author"[\s\S]*this\.ledgePlugin\.manifest\.author/);
 });
 
-void test("top and bottom docks anchor to the active note content area", () => {
+void test("top edge and top corners anchor to the active note content area", () => {
   const source = fs.readFileSync("src/dock.ts", "utf8");
 
   assert.match(source, /anchorRectForPosition/);
-  assert.match(source, /position !== "top" && position !== "bottom"/);
+  assert.match(source, /position === "top-left"/);
+  assert.match(source, /position === "top-right"/);
   assert.match(source, /contentEl\?: HTMLElement/);
   assert.match(source, /querySelector<HTMLElement>\("\.view-content"\)/);
   assert.match(source, /this\.positionTrigger\(rect, position/);
+});
+
+void test("corner triggers render as perpendicular pill arms instead of a square", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
+
+  assert.match(source, /const cornerExtent = Math\.max\(triggerSize \* 2\.6, 40\)/);
+  assert.match(styles, /data-position\*="-"[^\n]*ledge-dock-trigger::after/);
+  assert.match(styles, /width: 72%/);
+  assert.match(styles, /height: 72%/);
+  assert.doesNotMatch(styles, /data-position\*="-"[^\{]*\{[^\}]*border-radius: 0;/s);
 });
 
 void test("vault icon renames update the remembered path even while built-in is active", () => {

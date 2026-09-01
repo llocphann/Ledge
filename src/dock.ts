@@ -579,7 +579,11 @@ class DockInstance extends Component {
     leafContainer: HTMLElement | undefined,
     fallbackRect: DOMRect,
   ): DOMRect {
-    if (position !== "top" && position !== "bottom") return fallbackRect;
+    const usesActiveViewAnchor = position === "top"
+      || position === "bottom"
+      || position === "top-left"
+      || position === "top-right";
+    if (!usesActiveViewAnchor) return fallbackRect;
 
     const viewContent = (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
       ?? leafContainer?.querySelector<HTMLElement>(".view-content")
@@ -609,8 +613,9 @@ class DockInstance extends Component {
       left = rect.left + (rect.width - triggerLength) / 2;
       top = position === "bottom" ? rect.bottom - triggerSize : rect.top;
     } else {
-      width = Math.max(triggerSize, 34);
-      height = width;
+      const cornerExtent = Math.max(triggerSize * 2.6, 40);
+      width = cornerExtent;
+      height = cornerExtent;
       left = position.endsWith("right") ? rect.right - width : rect.left;
       top = position.startsWith("bottom") ? rect.bottom - height : rect.top;
     }
