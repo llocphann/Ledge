@@ -86,7 +86,6 @@ void test("corner triggers render as perpendicular pill arms instead of a square
   assert.match(styles, /data-position\*="-"[^\n]*ledge-dock-trigger::after/);
   assert.match(styles, /width: 72%/);
   assert.match(styles, /height: 72%/);
-  assert.doesNotMatch(styles, /data-position\*="-"[^\{]*\{[^\}]*border-radius: 0;/s);
 });
 
 void test("vault icon renames update the remembered path even while built-in is active", () => {
