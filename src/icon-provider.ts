@@ -9,6 +9,7 @@ import {
   type BuiltInIconChoice,
   type IconifyPrefix,
 } from "./icon-catalog";
+import { parseIconCache, serializeIconCache, type IconCacheData } from "./icon-cache";
 
 interface IconifyIconData {
   body: string;
@@ -29,7 +30,8 @@ interface IconifySearchResponse {
 const ICONIFY_API = "https://api.iconify.design";
 const OBSIDIAN_ICON_SIZE = 24;
 const FETCH_CHUNK_SIZE = 20;
-const registeredIconIds = new Set<string>();
+const registeredIconBodies = new Map<string, string>();
+const cachedIconBodies = new Map<string, string>();
 
 function isSupportedPrefix(value: string): value is IconifyPrefix {
   return ICONIFY_COLLECTIONS.some((collection) => collection.prefix === value);
@@ -45,12 +47,16 @@ function iconBody(data: IconifyIconData, defaults: IconifyIconResponse): string 
   return `<g transform="scale(${scaleX} ${scaleY})">${data.body}</g>`;
 }
 
+function registerIconBody(iconId: string, body: string): void {
+  addIcon(iconId, body);
+  registeredIconBodies.set(iconId, body);
+}
+
 function registerResponse(prefix: IconifyPrefix, response: IconifyIconResponse): void {
   if (!response.icons) return;
   for (const [name, data] of Object.entries(response.icons)) {
     const iconId = makeIconifyId(prefix, name);
-    addIcon(iconId, iconBody(data, response));
-    registeredIconIds.add(iconId);
+    registerIconBody(iconId, iconBody(data, response));
   }
 }
 
@@ -61,11 +67,23 @@ async function fetchIconChunk(prefix: IconifyPrefix, names: string[]): Promise<v
   registerResponse(prefix, response.json as IconifyIconResponse);
 }
 
+export function restoreIconifyCache(pluginData: unknown): void {
+  cachedIconBodies.clear();
+  for (const [iconId, body] of parseIconCache(pluginData)) {
+    cachedIconBodies.set(iconId, body);
+    registerIconBody(iconId, body);
+  }
+}
+
+export function exportIconifyCache(): IconCacheData {
+  return serializeIconCache(cachedIconBodies);
+}
+
 export async function ensureIconifyIcons(iconIds: string[]): Promise<void> {
   const grouped = new Map<IconifyPrefix, string[]>();
 
   for (const iconId of [...new Set(iconIds)]) {
-    if (registeredIconIds.has(iconId)) continue;
+    if (registeredIconBodies.has(iconId)) continue;
     const parsed = parseIconifyId(iconId);
     if (!parsed) continue;
     const names = grouped.get(parsed.prefix) ?? [];
@@ -80,6 +98,25 @@ export async function ensureIconifyIcons(iconIds: string[]): Promise<void> {
     }
   }
   await Promise.allSettled(requests);
+}
+
+export async function syncIconifyCache(iconIds: string[]): Promise<boolean> {
+  const selectedIds = [...new Set(iconIds.filter((iconId) => parseIconifyId(iconId) !== null))];
+  await ensureIconifyIcons(selectedIds);
+
+  const nextCache = new Map<string, string>();
+  for (const iconId of selectedIds) {
+    const body = registeredIconBodies.get(iconId);
+    if (body) nextCache.set(iconId, body);
+  }
+
+  const changed = nextCache.size !== cachedIconBodies.size
+    || [...nextCache].some(([iconId, body]) => cachedIconBodies.get(iconId) !== body);
+  if (!changed) return false;
+
+  cachedIconBodies.clear();
+  for (const [iconId, body] of nextCache) cachedIconBodies.set(iconId, body);
+  return true;
 }
 
 export async function searchIconifyIcons(query: string): Promise<BuiltInIconChoice[]> {
