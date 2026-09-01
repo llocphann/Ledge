@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a searchable Dock icon picker backed by Obsidian's registered icon library, with icon previews and no extra icon dependency.
 - Render the trigger pill with square 90-degree geometry at all four corner positions.
 
 ## 1.1.1
