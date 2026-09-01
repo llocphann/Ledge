@@ -56,9 +56,7 @@ export default class LedgePlugin extends Plugin {
   }
 
   private externalIconIds(): string[] {
-    return this.settings.items
-      .filter((item) => item.iconSource === "lucide")
-      .map((item) => item.icon);
+    return this.settings.items.map((item) => item.builtInIcon);
   }
 
   private async savePersistedData(): Promise<void> {
