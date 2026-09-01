@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Add a searchable Dock icon picker backed by Obsidian's registered icon library, with icon previews and no extra icon dependency.
+- Expand the Dock built-in icon picker into a compact grid that shows only icon and name while searching Obsidian/Lucide, Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons through one Built-in icon source.
+- Load the additional open-source icon collections from Iconify on demand instead of bundling thousands of SVG files into `main.js`.
 - Render the trigger pill with square 90-degree geometry at all four corner positions.
 
 ## 1.1.1
