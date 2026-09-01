@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Render the trigger pill with square 90-degree geometry at all four corner positions.
+- Add a searchable built-in Lucide icon library with previews for Dock items.
 
 ## 1.1.1
 
