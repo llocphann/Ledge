@@ -65,13 +65,15 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     setting.controlEl.addClass("ledge-icon-setting-control");
     setting.addText((text) => {
       text
-        .setPlaceholder("home")
+        .setPlaceholder("Home")
         .setValue(initialValue)
         .onChange((value) => {
           void this.setControlValue(key, value);
         });
       text.inputEl.setAttribute("aria-label", "Icon ID");
-      setTextValue = (value) => text.setValue(value);
+      setTextValue = (value) => {
+        text.setValue(value);
+      };
     });
 
     setting.addButton((button) => {
