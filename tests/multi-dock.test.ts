@@ -7,42 +7,67 @@ import {
   normalizeSettings,
 } from "../src/settings";
 
-void test("layout settings use a dock list instead of a preset dropdown", () => {
+void test("settings use one Dock-first hierarchy instead of repeating preset selectors", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const baseSettings = fs.readFileSync("src/settings-tab.ts", "utf8");
 
-  assert.match(source, /heading: section === "layout" \? "Docks" : "Dock presets"/);
-  assert.match(source, /ledge-dock-preset-card/);
-  assert.match(source, /renderDockLayoutSettings/);
-  assert.match(source, /"Preset name"/);
-  assert.match(source, /"Enable dock"/);
-  assert.match(source, /"Position"/);
-  assert.match(source, /"Item size"/);
-  assert.match(source, /"Icon size"/);
-  assert.match(source, /"Gap"/);
-  assert.match(source, /"Padding"/);
-  assert.match(source, /"Corner radius"/);
-  assert.match(source, /"Edge offset"/);
-  assert.doesNotMatch(source, /dropdown\.addOption\(\s*dock\.id/);
+  assert.match(source, /type WorkspaceSettingsTab = "docks" \| "data" \| "about"/);
+  assert.match(source, /\{ id: "docks", label: "Docks"/);
+  assert.match(source, /const DOCK_SETTINGS_SECTIONS[\s\S]*"items",[\s\S]*"layout"/);
+  assert.match(source, /definitions\.push\(this\.dockWorkspaceDefinitions\(\)\)/);
+  assert.match(source, /heading: "Docks"/);
+  assert.match(source, /Every setting in these sections belongs only to the open Dock/);
+  assert.match(source, /renderDockSectionNavigation/);
+  assert.doesNotMatch(source, /dockPresetListDefinitions\(section\)/);
+  assert.doesNotMatch(source, /renderDockLayoutSettings/);
+
+  // Existing declarative definitions remain the single source of truth for all
+  // Dock features instead of duplicating controls in the preset UI.
+  assert.match(baseSettings, /heading: "Layout"/);
+  assert.match(baseSettings, /heading: "Reveal behavior"/);
+  assert.match(baseSettings, /heading: "Context visibility"/);
+  assert.match(baseSettings, /heading: "Edge trigger"/);
+  assert.match(baseSettings, /heading: "Appearance"/);
+  assert.match(baseSettings, /heading: "Dock items"/);
 });
 
-void test("every dock-scoped settings tab exposes the same dock preset context", () => {
+void test("every Dock section is scoped by the open preset and Items is the first task", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
   for (const section of ["layout", "behavior", "visibility", "trigger", "appearance", "items"]) {
-    assert.match(source, new RegExp(`\\b${section}: "ledge-settings-panel-${section}"`));
+    assert.match(source, new RegExp(`${section}: "ledge-settings-panel-${section}"`));
   }
-  assert.match(source, /definitions\.push\(this\.dockPresetListDefinitions\(section\)\)/);
-  assert.match(source, /Every preset keeps its own/);
+  assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);
+  assert.match(source, /renderedTab = this\.activeWorkspaceTab === "docks"[\s\S]*this\.activeDockSection/);
+  assert.match(source, /The remaining sections control only this dock/);
 });
 
-void test("dock card rerenders clear stale inline layout bodies and do not use focus highlighting", () => {
+void test("Dock preset rerenders clear stale bodies and do not use focus highlighting", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
-  assert.match(source, /resetDockCardRender\(setting\)/);
+  assert.match(source, /resetDockPresetRender\(setting\)/);
   assert.match(source, /classList\.contains\("ledge-dock-preset-body"\)/);
   assert.match(source, /setting\.controlEl\.replaceChildren\(\)/);
   assert.doesNotMatch(source, /interactive-accent/);
   assert.doesNotMatch(source, /is-selected|is-disabled/);
+});
+
+void test("top and bottom docks anchor to the active note content area", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(source, /anchorRectForPosition/);
+  assert.match(source, /position !== "top" && position !== "bottom"/);
+  assert.match(source, /contentEl\?: HTMLElement/);
+  assert.match(source, /querySelector<HTMLElement>\("\.view-content"\)/);
+  assert.match(source, /this\.positionTrigger\(rect, position/);
+});
+
+void test("vault icon renames update the remembered path even while built-in is active", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(source, /const rememberedIcon = rename\(item\.vaultIconPath\)/);
+  assert.match(source, /item\.vaultIconPath = rememberedIcon/);
+  assert.match(source, /if \(item\.iconSource === "vault"\) item\.icon = rememberedIcon/);
 });
 
 void test("disabled docks still reserve their exclusive position", () => {
