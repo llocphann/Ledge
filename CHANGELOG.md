@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
-- Replace the multi-Dock preset dropdown with a card list in Layout: each Dock is visible at a glance, the selected card expands its full layout settings, and the remaining settings tabs continue editing that selected Dock.
+- Replace the multi-Dock preset dropdown with Dock cards and expose the same Dock preset context in Layout, Behavior, Visibility, Trigger, Appearance, and Items so each preset's settings and Dock items are clearly scoped.
+- Keep expanded Layout controls inside the selected Dock card, clear stale custom-render bodies before rerendering to prevent duplicated layout controls, and keep selected cards visually neutral instead of adding accent borders or backgrounds.
 - Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
 - Migrate the existing single-Dock configuration into `Dock 1` automatically without losing its layout, items, visibility rules, trigger, or appearance settings.
 - Upgrade settings export schema to v2 for multi-Dock backups while keeping schema-v1 imports compatible.
