@@ -125,7 +125,6 @@ export class IconPickerModal extends Modal {
     this.contentEl.empty();
 
     let query = "";
-    let searchInput: HTMLInputElement | null = null;
     const status = this.contentEl.createEl("p", { cls: "setting-item-description" });
     const results = this.contentEl.createDiv();
 
@@ -179,7 +178,6 @@ export class IconPickerModal extends Modal {
     new Setting(this.contentEl)
       .setName("Search icons")
       .addSearch((search) => {
-        searchInput = search.inputEl;
         search
           .setPlaceholder(`Search ${this.allIcons.length.toLocaleString()} icons…`)
           .onChange((value) => {
@@ -189,7 +187,6 @@ export class IconPickerModal extends Modal {
       });
 
     render();
-    searchInput?.focus();
   }
 
   onClose(): void {
