@@ -8,7 +8,7 @@
 - Move Items, Layout, Behavior, Visibility, Trigger, and Appearance into a separate full-width section bar below the preset controls, with spacing and a divider so preset selection and Dock-section selection are visually distinct.
 - Keep About as a shared footer showing the current plugin version and author from the manifest alongside restore-defaults and support actions.
 - Reuse the existing declarative Dock section definitions instead of manually duplicating Layout controls, preventing stale custom-render bodies from producing repeated settings.
-- Anchor straight Top and Bottom Docks, including their auto-hide triggers, to the active view content area instead of the entire root workspace; left, right, and corner positions retain their existing root-pane placement.
+- Anchor straight Top and Bottom Docks, including their auto-hide triggers, to the active view content area instead of the entire root workspace; Top Left and Top Right corner triggers now use the same active-note anchor so they stay inside the note area.
 - Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
 - Migrate the existing single-Dock configuration into `Dock 1` automatically without losing its layout, items, visibility rules, trigger, or appearance settings.
 - Upgrade settings export schema to v2 for multi-Dock backups while keeping schema-v1 imports compatible.
@@ -17,7 +17,8 @@
 - Persist external built-in icon choices retained by Dock items in Ledge plugin data and restore them before Dock startup, so they continue to render offline after reloads and after switching away from and back to Icon in vault.
 - Switch the Dock item icon control with its source: Built-in icon shows the icon picker, Icon in vault shows the file path and image-rendering controls, and each source preserves its previous value when switching back and forth.
 - Keep remembered Icon in vault paths synchronized when their files or parent folders are renamed, even while the item is temporarily using a built-in icon.
-- Render the trigger pill with square 90-degree geometry at all four corner positions.
+- Render all four corner triggers as two rounded pill arms meeting at 90 degrees instead of a square corner block.
+- Apply Auto-hide immediately when switching it from Off to On, while clearing stale reveal/hide timers across mode changes.
 - Use Node.js 22 for development and CI tooling.
 
 ## 1.1.1
