@@ -5,13 +5,19 @@ import {
   type App,
 } from "obsidian";
 import { iconDisplayName, type BuiltInIconChoice } from "./icon-catalog";
-import { searchIconifyIcons } from "./icon-provider";
+import { cachedIconifyChoices, searchIconifyIcons } from "./icon-provider";
 
 const EMPTY_QUERY_LIMIT = 120;
 const LOCAL_SEARCH_LIMIT = 48;
 const TOTAL_SEARCH_LIMIT = 144;
 
-function availableObsidianIcons(query: string): BuiltInIconChoice[] {
+function matchesQuery(choice: BuiltInIconChoice, query: string): boolean {
+  if (!query) return true;
+  return choice.name.toLocaleLowerCase().includes(query)
+    || choice.id.toLocaleLowerCase().includes(query);
+}
+
+function availableLocalIcons(query: string): BuiltInIconChoice[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const byDisplayId = new Map<string, string>();
 
@@ -24,14 +30,14 @@ function availableObsidianIcons(query: string): BuiltInIconChoice[] {
     }
   }
 
-  return [...byDisplayId.values()]
+  const cached = cachedIconifyChoices()
+    .filter((choice) => matchesQuery(choice, normalizedQuery));
+  const obsidian = [...byDisplayId.values()]
     .map((id) => ({ id, name: iconDisplayName(id) }))
-    .filter((choice) => (
-      !normalizedQuery
-      || choice.name.toLocaleLowerCase().includes(normalizedQuery)
-      || choice.id.toLocaleLowerCase().includes(normalizedQuery)
-    ))
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .filter((choice) => matchesQuery(choice, normalizedQuery))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  return [...cached, ...obsidian]
     .slice(0, normalizedQuery ? LOCAL_SEARCH_LIMIT : EMPTY_QUERY_LIMIT);
 }
 
@@ -58,14 +64,14 @@ class LedgeIconPickerModal extends SuggestModal<BuiltInIconChoice> {
   }
 
   async getSuggestions(query: string): Promise<BuiltInIconChoice[]> {
-    const local = availableObsidianIcons(query);
+    const local = availableLocalIcons(query);
     if (!query.trim()) return local;
 
     let external: BuiltInIconChoice[] = [];
     try {
       external = await searchIconifyIcons(query);
     } catch {
-      // Keep the local Obsidian icon registry usable when the network is unavailable.
+      // Keep Obsidian and previously cached icons usable when the network is unavailable.
     }
 
     const seen = new Set(local.map((choice) => choice.id));
