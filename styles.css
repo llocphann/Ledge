@@ -362,61 +362,36 @@
   --ledge-nudge-y: -1;
 }
 
-.ledge-dock-root[data-position="left"] .ledge-dock-panel:not(.is-visible) {
-  transform: translateX(calc(-100% - var(--ledge-trigger-size))) scale(.96);
-}
-
-.ledge-dock-root[data-position="right"] .ledge-dock-panel:not(.is-visible) {
-  transform: translateX(calc(100% + var(--ledge-trigger-size))) scale(.96);
-}
-
-.ledge-dock-root[data-position="top"] .ledge-dock-panel:not(.is-visible) {
-  transform: translateY(calc(-100% - var(--ledge-trigger-size))) scale(.96);
-}
-
-.ledge-dock-root[data-position="bottom"] .ledge-dock-panel:not(.is-visible) {
-  transform: translateY(calc(100% + var(--ledge-trigger-size))) scale(.96);
-}
-
-.ledge-dock-root[data-position="top-left"] .ledge-dock-panel:not(.is-visible) {
-  transform: translate(-104%, -104%) scale(.94);
-}
-
-.ledge-dock-root[data-position="top-right"] .ledge-dock-panel:not(.is-visible) {
-  transform: translate(104%, -104%) scale(.94);
-}
-
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-panel:not(.is-visible) {
-  transform: translate(-104%, 104%) scale(.94);
-}
-
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-panel:not(.is-visible) {
-  transform: translate(104%, 104%) scale(.94);
+.ledge-dock-root.is-auto-hide .ledge-dock-panel:not(.is-visible) {
+  transform:
+    translate(
+      calc(var(--ledge-nudge-x) * -14px),
+      calc(var(--ledge-nudge-y) * -14px)
+    )
+    scale(.95);
 }
 
 .ledge-dock-item {
   position: relative;
-  z-index: 1;
   width: var(--ledge-item-size);
   height: var(--ledge-item-size);
-  min-width: 0;
-  min-height: 0;
+  min-width: var(--ledge-item-size);
+  min-height: var(--ledge-item-size);
   display: grid;
   place-items: center;
-  margin: 0;
-  padding: 6px;
-  appearance: none;
-  border: 1px solid color-mix(in srgb, var(--ledge-border-color) 82%, transparent);
-  border-radius: min(calc(var(--ledge-radius) * .72), calc(var(--ledge-item-size) * .34));
+  flex: 0 0 var(--ledge-item-size);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ledge-border-color) 74%, transparent);
+  border-radius: max(8px, calc(var(--ledge-radius) - 5px));
   background:
     linear-gradient(
-      var(--ledge-gradient-angle),
-      var(--ledge-item-gradient-start, color-mix(in srgb, var(--ledge-accent) 17%, var(--background-primary-alt))),
-      var(--ledge-item-gradient-end, var(--background-secondary))
+      145deg,
+      color-mix(in srgb, var(--ledge-item-gradient-start, var(--ledge-surface-start)) 96%, transparent),
+      color-mix(in srgb, var(--ledge-item-gradient-end, var(--ledge-surface-end)) 92%, transparent)
     );
   color: var(--ledge-item-icon-color, var(--ledge-accent));
   box-shadow:
-    inset 0 1px color-mix(in srgb, var(--text-normal) 9%, transparent),
+    inset 0 1px color-mix(in srgb, var(--text-normal) 7%, transparent),
     0 5px 12px color-mix(in srgb, var(--background-primary) 64%, transparent);
   cursor: grab;
   touch-action: none;
@@ -676,6 +651,22 @@
   display: block;
 }
 
+.ledge-dock-preset-switcher-setting .setting-item-control,
+.ledge-dock-section-nav-setting .setting-item-control {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.ledge-dock-section-nav-setting {
+  margin-top: var(--size-4-5);
+  padding-top: var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.ledge-dock-section-tabs {
+  flex: 1 1 100%;
+}
+
 .ledge-settings-panel-items {
   display: grid;
   gap: var(--size-4-4);
@@ -707,9 +698,7 @@
 .ledge-settings-root:not([data-ledge-settings-tab="visibility"]) .ledge-settings-panel-visibility,
 .ledge-settings-root:not([data-ledge-settings-tab="trigger"]) .ledge-settings-panel-trigger,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
-.ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
-.ledge-settings-root:not([data-ledge-settings-tab="data"]) .ledge-settings-panel-data,
-.ledge-settings-root:not([data-ledge-settings-tab="about"]) .ledge-settings-panel-about {
+.ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items {
   display: none;
 }
 
