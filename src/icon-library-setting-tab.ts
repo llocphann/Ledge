@@ -60,8 +60,9 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   private renderIconControl(setting: Setting, key: string): void {
     const storedValue = this.getControlValue(key);
     const initialValue = typeof storedValue === "string" ? storedValue : "";
-    let updateText = (_value: string): void => undefined;
+    let setTextValue: ((value: string) => void) | null = null;
 
+    setting.controlEl.addClass("ledge-icon-setting-control");
     setting.addText((text) => {
       text
         .setPlaceholder("home")
@@ -70,7 +71,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
           void this.setControlValue(key, value);
         });
       text.inputEl.setAttribute("aria-label", "Icon ID");
-      updateText = (value) => text.setValue(value);
+      setTextValue = (value) => text.setValue(value);
     });
 
     setting.addButton((button) => {
@@ -79,7 +80,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         .setIcon("shapes")
         .onClick(() => {
           openIconPicker(this.pickerApp, (iconId) => {
-            updateText(iconId);
+            setTextValue?.(iconId);
             void this.setControlValue(key, iconId);
           });
         });
