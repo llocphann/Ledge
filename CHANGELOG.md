@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
-- Restructure settings around a Dock-first hierarchy: the top level contains Docks, Data, and About, while each open Dock owns Items, Layout, Behavior, Visibility, Trigger, and Appearance; Items opens first for faster shortcut management.
+- Restructure settings around a Dock-first hierarchy: the top level contains Docks and Data, while each open Dock owns Items, Layout, Behavior, Visibility, Trigger, and Appearance; Items opens first for faster shortcut management.
+- Replace the standalone About tab with a shared footer visible under every settings view, showing the current plugin version and author from the manifest alongside restore-defaults and support actions.
 - Keep Dock preset rows visually neutral and reuse the existing declarative Dock section definitions instead of manually duplicating Layout controls, preventing stale custom-render bodies from producing repeated settings.
 - Anchor straight Top and Bottom Docks, including their auto-hide triggers, to the active view content area instead of the entire root workspace; left, right, and corner positions retain their existing root-pane placement.
 - Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
