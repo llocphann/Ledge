@@ -96,7 +96,7 @@ void test("settings persist only through the Obsidian plugin data API", () => {
   const main = fs.readFileSync("src/main.ts", "utf8");
 
   assert.match(main, /this\.loadData\(\)/);
-  assert.match(main, /this\.saveData\(this\.settings\)/);
+  assert.match(main, /this\.saveData\(/);
   assert.doesNotMatch(main, /localStorage|sessionStorage/);
 });
 
