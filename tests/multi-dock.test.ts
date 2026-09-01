@@ -10,7 +10,7 @@ import {
 void test("layout settings use a dock list instead of a preset dropdown", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
-  assert.match(source, /heading: "Docks"/);
+  assert.match(source, /heading: section === "layout" \? "Docks" : "Dock presets"/);
   assert.match(source, /ledge-dock-preset-card/);
   assert.match(source, /renderDockLayoutSettings/);
   assert.match(source, /"Preset name"/);
@@ -23,6 +23,26 @@ void test("layout settings use a dock list instead of a preset dropdown", () => 
   assert.match(source, /"Corner radius"/);
   assert.match(source, /"Edge offset"/);
   assert.doesNotMatch(source, /dropdown\.addOption\(\s*dock\.id/);
+});
+
+void test("every dock-scoped settings tab exposes the same dock preset context", () => {
+  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  for (const section of ["layout", "behavior", "visibility", "trigger", "appearance", "items"]) {
+    assert.match(source, new RegExp(`\\b${section}: \\\"ledge-settings-panel-${section}\\\"`));
+  }
+  assert.match(source, /definitions\.push\(this\.dockPresetListDefinitions\(section\)\)/);
+  assert.match(source, /Every preset keeps its own/);
+});
+
+void test("dock card rerenders clear stale inline layout bodies and do not use focus highlighting", () => {
+  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(source, /resetDockCardRender\(setting\)/);
+  assert.match(source, /classList\.contains\("ledge-dock-preset-body"\)/);
+  assert.match(source, /setting\.controlEl\.replaceChildren\(\)/);
+  assert.doesNotMatch(source, /interactive-accent/);
+  assert.doesNotMatch(source, /is-selected|is-disabled/);
 });
 
 void test("disabled docks still reserve their exclusive position", () => {
