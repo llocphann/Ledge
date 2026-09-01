@@ -88,6 +88,16 @@ void test("corner triggers render as perpendicular pill arms instead of a square
   assert.match(styles, /height: 72%/);
 });
 
+void test("enabling auto-hide hides an already-visible Dock immediately", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(source, /private previousAutoHide: boolean \| null = null/);
+  assert.match(source, /const autoHideChanged = this\.previousAutoHide !== null[\s\S]*this\.previousAutoHide !== settings\.autoHide/);
+  assert.match(source, /const autoHideJustEnabled = autoHideChanged && settings\.autoHide/);
+  assert.match(source, /if \(autoHideChanged\) this\.clearTimers\(\)/);
+  assert.match(source, /else if \(autoHideJustEnabled\) this\.setVisible\(false\)/);
+});
+
 void test("vault icon renames update the remembered path even while built-in is active", () => {
   const source = fs.readFileSync("src/dock.ts", "utf8");
 

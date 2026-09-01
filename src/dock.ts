@@ -262,6 +262,7 @@ class DockInstance extends Component {
   private dragState: DragState | null = null;
   private suppressClickId: string | null = null;
   private visible = false;
+  private previousAutoHide: boolean | null = null;
   private renderVersion = 0;
 
   constructor(
@@ -301,6 +302,11 @@ class DockInstance extends Component {
 
   render(): void {
     const settings = this.controller.settings();
+    const autoHideChanged = this.previousAutoHide !== null
+      && this.previousAutoHide !== settings.autoHide;
+    const autoHideJustEnabled = autoHideChanged && settings.autoHide;
+    this.previousAutoHide = settings.autoHide;
+    if (autoHideChanged) this.clearTimers();
     this.renderVersion += 1;
     this.root.dataset.position = settings.position;
     this.root.classList.toggle("is-auto-hide", settings.autoHide);
@@ -327,6 +333,7 @@ class DockInstance extends Component {
     this.clearMagnification();
     if (!this.syncVisibility()) return;
     if (!settings.autoHide) this.setVisible(true);
+    else if (autoHideJustEnabled) this.setVisible(false);
     else this.setVisible(this.visible);
     this.refreshGeometryAndActiveState();
   }
