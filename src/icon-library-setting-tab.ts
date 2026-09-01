@@ -22,6 +22,41 @@ const POSITION_LABELS: Record<DockPosition, string> = {
   "bottom-right": "Bottom right (90°)",
 };
 
+type DockSettingsSection =
+  | "layout"
+  | "behavior"
+  | "visibility"
+  | "trigger"
+  | "appearance"
+  | "items";
+
+const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
+  "layout",
+  "behavior",
+  "visibility",
+  "trigger",
+  "appearance",
+  "items",
+];
+
+const SECTION_LABELS: Record<DockSettingsSection, string> = {
+  layout: "layout",
+  behavior: "behavior",
+  visibility: "visibility rules",
+  trigger: "trigger",
+  appearance: "appearance",
+  items: "items",
+};
+
+const SECTION_CLASSES: Record<DockSettingsSection, string> = {
+  layout: "ledge-settings-panel-layout",
+  behavior: "ledge-settings-panel-behavior",
+  visibility: "ledge-settings-panel-visibility",
+  trigger: "ledge-settings-panel-trigger",
+  appearance: "ledge-settings-panel-appearance",
+  items: "ledge-settings-panel-items",
+};
+
 type LayoutNumberKey =
   | "itemSize"
   | "iconSize"
@@ -57,11 +92,28 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   }
 
   override getSettingDefinitions(): SettingDefinitionItem[] {
-    const definitions = super.getSettingDefinitions();
-    const layoutIndex = definitions.findIndex((definition) =>
-      (definition as unknown as MutableSettingDefinition).cls === "ledge-settings-panel-layout");
-    if (layoutIndex >= 0) definitions.splice(layoutIndex, 1, this.dockPresetListDefinitions());
-    else definitions.splice(1, 0, this.dockPresetListDefinitions());
+    const baseDefinitions = super.getSettingDefinitions();
+    const definitions: SettingDefinitionItem[] = [];
+    const injectedSections = new Set<DockSettingsSection>();
+
+    for (const definition of baseDefinitions) {
+      const section = this.sectionForDefinition(definition);
+      if (!section) {
+        definitions.push(definition);
+        continue;
+      }
+
+      if (!injectedSections.has(section)) {
+        definitions.push(this.dockPresetListDefinitions(section));
+        injectedSections.add(section);
+      }
+
+      // Layout controls live inside the expanded Dock card. The remaining
+      // section definitions stay below their Dock list and edit the selected
+      // Dock through the existing single-Dock settings implementation.
+      if (section !== "layout") definitions.push(definition);
+    }
+
     this.decorateControls(definitions);
     return definitions;
   }
@@ -99,14 +151,24 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     await super.setControlValue(key, value);
   }
 
-  private dockPresetListDefinitions(): SettingDefinitionItem {
+  private sectionForDefinition(definition: SettingDefinitionItem): DockSettingsSection | null {
+    const cls = (definition as unknown as MutableSettingDefinition).cls;
+    if (!cls) return null;
+    return DOCK_SETTINGS_SECTIONS.find((section) => cls === SECTION_CLASSES[section]) ?? null;
+  }
+
+  private dockPresetListDefinitions(section: DockSettingsSection): SettingDefinitionItem {
+    const editingLabel = SECTION_LABELS[section];
     const items: SettingGroupItem<string>[] = [
       {
         name: "Dock presets",
-        desc: `Each dock owns one exclusive edge or corner position. Open a dock below to edit its layout (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`,
+        desc: section === "layout"
+          ? `Each dock owns one exclusive edge or corner position. Open a dock below to edit its layout (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`
+          : `Choose which dock's ${editingLabel} to edit below. Every preset keeps its own ${editingLabel}.`,
         searchable: false,
         render: (setting) => {
           setting.settingEl.addClass("ledge-dock-preset-toolbar");
+          if (section !== "layout") return;
           setting.addButton((button) => {
             button
               .setButtonText("Add dock")
@@ -125,30 +187,36 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
           });
         },
       },
-      ...this.ledgePlugin.settings.docks.map((dock) => this.dockPresetCardDefinition(dock)),
+      ...this.ledgePlugin.settings.docks.map((dock) =>
+        this.dockPresetCardDefinition(dock, section)),
     ];
     return {
       type: "group",
-      heading: "Docks",
-      cls: "ledge-settings-panel-layout",
+      heading: section === "layout" ? "Docks" : "Dock presets",
+      cls: SECTION_CLASSES[section],
       items,
     };
   }
 
-  private dockPresetCardDefinition(dock: DockPresetSettings): SettingGroupItem<string> {
+  private dockPresetCardDefinition(
+    dock: DockPresetSettings,
+    section: DockSettingsSection,
+  ): SettingGroupItem<string> {
     const selected = dock.id === this.ledgePlugin.settings.selectedDockId;
     return {
       name: dock.name,
       desc: `${POSITION_LABELS[dock.position]} · ${dock.enabled ? "Enabled" : "Hidden"}`,
       searchable: false,
       render: (setting) => {
-        this.styleDockCard(setting, selected, dock.enabled);
+        this.resetDockCardRender(setting);
+        this.styleDockCard(setting);
 
         setting.addButton((button) => {
           button
-            .setButtonText(selected ? "Editing" : "Edit")
             .setIcon(selected ? "chevron-down" : "chevron-right")
-            .setTooltip(selected ? "This dock is open" : "Open dock layout")
+            .setTooltip(selected
+              ? `Editing this dock's ${SECTION_LABELS[section]}`
+              : `Edit this dock's ${SECTION_LABELS[section]}`)
             .setDisabled(selected)
             .onClick(() => {
               void this.ledgePlugin.selectDockPreset(dock.id).then((changed) => {
@@ -157,24 +225,26 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
             });
         });
 
-        setting.addButton((button) => {
-          button
-            .setIcon("copy")
-            .setTooltip("Duplicate dock")
-            .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
-            .onClick(() => this.duplicateDock(dock.id));
-        });
+        if (section === "layout") {
+          setting.addButton((button) => {
+            button
+              .setIcon("copy")
+              .setTooltip("Duplicate dock")
+              .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
+              .onClick(() => this.duplicateDock(dock.id));
+          });
 
-        setting.addButton((button) => {
-          button
-            .setIcon("trash-2")
-            .setTooltip("Delete dock")
-            .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
-            .setDestructive()
-            .onClick(() => this.deleteDock(dock.id));
-        });
+          setting.addButton((button) => {
+            button
+              .setIcon("trash-2")
+              .setTooltip("Delete dock")
+              .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
+              .setDestructive()
+              .onClick(() => this.deleteDock(dock.id));
+          });
+        }
 
-        if (!selected) return;
+        if (section !== "layout" || !selected) return;
         const body = setting.settingEl.createDiv({ cls: "ledge-dock-preset-body" });
         body.setCssStyles({
           flex: "1 0 100%",
@@ -188,24 +258,24 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     };
   }
 
-  private styleDockCard(setting: Setting, selected: boolean, enabled: boolean): void {
+  private resetDockCardRender(setting: Setting): void {
+    setting.controlEl.replaceChildren();
+    for (const child of Array.from(setting.settingEl.children)) {
+      if (child.classList.contains("ledge-dock-preset-body")) child.remove();
+    }
+  }
+
+  private styleDockCard(setting: Setting): void {
     const card = setting.settingEl;
     card.addClass("ledge-dock-preset-card");
-    card.classList.toggle("is-selected", selected);
-    card.classList.toggle("is-disabled", !enabled);
     card.setCssStyles({
       flexWrap: "wrap",
       gap: "var(--size-4-2)",
       margin: "var(--size-4-2) 0",
       padding: "var(--size-4-3)",
-      border: selected
-        ? "1px solid var(--interactive-accent)"
-        : "1px solid var(--background-modifier-border)",
+      border: "1px solid var(--background-modifier-border)",
       borderRadius: "var(--radius-m)",
-      background: selected
-        ? "color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary))"
-        : "var(--background-secondary)",
-      opacity: enabled ? "1" : ".72",
+      background: "var(--background-secondary)",
     });
     setting.infoEl.setCssStyles({ flex: "1 1 220px" });
     setting.controlEl.setCssStyles({ flex: "0 0 auto", flexWrap: "wrap" });
