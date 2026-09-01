@@ -28,9 +28,11 @@ Ledge adds configurable navigation docks to the edges and corners of your Obsidi
 
 ## Configure Ledge
 
-Open **Settings → Community plugins → Ledge**. The top level contains **Docks** and **Data**. About is not a separate destination: a shared **About** footer stays at the bottom of every settings view and reads the current plugin **Version** and **Author** directly from `manifest.json`, alongside the existing restore-defaults and support actions.
+Open **Settings → Community plugins → Ledge**. Ledge now uses one continuous settings page instead of separate **Docks** and **Data** destinations. Dock configuration comes first, **Data** follows the Dock settings, and **About** stays at the bottom with the current plugin **Version** and **Author** read from `manifest.json`.
 
-Open a Dock under **Docks**, then choose one of its sections:
+At the top of **Docks**, every preset is represented by one compact button. The `+` button always appears after the last preset and creates the next Dock. Selecting another preset changes the whole editing context. Rename, duplicate, and delete actions remain available for the selected preset without adding extra controls to the preset switcher itself.
+
+The selected Dock then exposes a separate full-width section bar below the preset controls:
 
 - **Items** — shortcuts, target paths, built-in or vault icons, and per-item overrides;
 - **Layout** — enabled state, exclusive position, item/icon size, gap, padding, radius, and edge offset;
@@ -39,9 +41,9 @@ Open a Dock under **Docks**, then choose one of its sections:
 - **Trigger** — activation area, reveal timing, and trigger-pill appearance;
 - **Appearance** — Dock surface, border, accent, and gradient controls.
 
-**Items** opens first because adding and maintaining shortcuts is the most common Dock task. Switching to another Dock changes the whole editing context, so Items, Layout, Behavior, Visibility, Trigger, and Appearance always belong to that one preset. The Dock row itself stays visually neutral; the chevron communicates which preset is open without adding a focus border or background highlight.
+**Items** opens first because adding and maintaining shortcuts is the most common Dock task. The section bar is visually separated from the preset switcher so it is clear that presets choose *which Dock* is being edited while the section bar chooses *which part of that Dock* to edit.
 
-Use **Add dock** to create another Dock or the copy action on a Dock row to duplicate it. Every preset receives one of the eight available positions. A position already used by another preset is removed from that Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
+Every preset receives one of the eight available positions. A position already used by another preset is removed from that Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
 
 For the straight **Top** and **Bottom** positions, Ledge anchors the Dock and its trigger to the active view's content area instead of the top or bottom of the entire root workspace. This keeps a Top Dock aligned with the note, Base, canvas, or other active view when panes are split. Left, right, and the four corner positions keep their existing root-pane placement behavior.
 
