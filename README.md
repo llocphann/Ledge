@@ -16,7 +16,7 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 - Independent controls for the shared dock background and outer border.
 - Adjustable reveal delay, hide delay, trigger size, and motion duration.
 - Optional macOS-style focused and neighboring item magnification.
-- Searchable Obsidian/Lucide icon library or images stored inside the vault.
+- Unified searchable built-in icon picker with Obsidian/Lucide, Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons.
 - Per-item icon size, icon color, and tile gradient overrides.
 - Add, disable, remove, and reorder shortcuts.
 - Pointer drag-and-drop plus `Alt` + arrow keyboard reordering.
@@ -32,10 +32,10 @@ Every dock item has:
 
 - a label;
 - a vault-relative target path;
-- either an icon chosen from Obsidian's searchable icon library, a manually entered icon ID, or a vault-relative image path;
+- either an icon chosen from the unified built-in icon picker, a manually entered Obsidian icon ID, or a vault-relative image path;
 - optional icon size, color, and tile gradient overrides.
 
-Select **Browse icons** to search the icons registered in the current Obsidian app and preview each result before choosing it. Ledge reads that icon registry at runtime instead of bundling a separate icon package.
+Select **Browse icons** to search a grid where each result shows only its icon and readable name. Obsidian/Lucide icons come from the local Obsidian icon registry. Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons are queried from Iconify on demand and registered into the current Obsidian session, which keeps the Ledge plugin bundle small instead of shipping thousands of SVG files.
 
 For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
 
