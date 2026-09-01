@@ -21,21 +21,57 @@ type MutableSettingDefinition = {
 
 /**
  * Adds the unified searchable built-in icon library to Ledge's existing
- * declarative settings without changing the stored Dock item schema.
+ * declarative settings and keeps separate values for each icon source.
  */
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   constructor(
     app: App,
-    ledge: LedgePlugin,
+    private readonly ledgePlugin: LedgePlugin,
     private readonly pickerApp: App = app,
   ) {
-    super(app, ledge);
+    super(app, ledgePlugin);
   }
 
   override getSettingDefinitions(): SettingDefinitionItem[] {
     const definitions = super.getSettingDefinitions();
     this.decorateIconControls(definitions);
     return definitions;
+  }
+
+  override async setControlValue(key: string, value: unknown): Promise<void> {
+    const itemKey = this.parseIconItemKey(key);
+    if (!itemKey) {
+      await super.setControlValue(key, value);
+      return;
+    }
+
+    const item = this.ledgePlugin.settings.items.find((candidate) => candidate.id === itemKey.id);
+    if (!item) return;
+
+    if (itemKey.field === "iconSource") {
+      if (item.iconSource === "vault") item.vaultIconPath = item.icon;
+      else item.builtInIcon = item.icon;
+
+      item.iconSource = value === "vault" ? "vault" : "lucide";
+      item.icon = item.iconSource === "vault" ? item.vaultIconPath : item.builtInIcon;
+      await this.ledgePlugin.saveSettings();
+
+      // saveSettings normalizes Dock items into new objects, so rebuild the page
+      // instead of evaluating visibility closures that still reference the old item.
+      this.update();
+      return;
+    }
+
+    if (itemKey.field === "icon") {
+      const icon = typeof value === "string" ? value : "";
+      item.icon = icon;
+      if (item.iconSource === "vault") item.vaultIconPath = icon;
+      else item.builtInIcon = icon;
+      await this.ledgePlugin.saveSettings();
+      return;
+    }
+
+    await super.setControlValue(key, value);
   }
 
   private decorateIconControls(definitions: SettingDefinitionItem[]): void {
@@ -53,7 +89,11 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         && key.endsWith(":iconSource")
         && control.options
       ) {
-        control.options = { ...control.options, lucide: "Built-in icon" };
+        control.options = {
+          ...control.options,
+          lucide: "Built-in icon",
+          vault: "Icon in vault",
+        };
         continue;
       }
 
@@ -98,5 +138,14 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
           });
         });
     });
+  }
+
+  private parseIconItemKey(key: string): { id: string; field: string } | null {
+    if (!key.startsWith("item:")) return null;
+    const [, id, ...fieldParts] = key.split(":");
+    if (!id || fieldParts.length === 0) return null;
+    const field = fieldParts.join(":");
+    if (field !== "icon" && field !== "iconSource") return null;
+    return { id, field };
   }
 }
