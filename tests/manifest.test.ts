@@ -108,11 +108,15 @@ void test("settings persist only through the Obsidian plugin data API", () => {
   assert.doesNotMatch(main, /localStorage|sessionStorage/);
 });
 
-void test("corner trigger pills use the Dock's 90-degree geometry", () => {
+void test("corner trigger pills use perpendicular rounded arms", () => {
   const styles = fs.readFileSync("styles.css", "utf8");
 
   assert.match(
     styles,
-    /\[data-position\*="-"\] \.ledge-dock-trigger::before \{[\s\S]*?border-radius: 0;/,
+    /\[data-position\*="-"\] \.ledge-dock-trigger::before \{[\s\S]*?width: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
+  );
+  assert.match(
+    styles,
+    /\[data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?height: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
   );
 });
