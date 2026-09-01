@@ -1,14 +1,14 @@
 import {
   Notice,
+  Setting,
   type App,
-  type Setting,
   type SettingDefinitionItem,
 } from "obsidian";
 import { openIconPicker } from "./icon-picker";
 import type LedgePlugin from "./main";
 import { availableDockPositions, MAX_DOCK_PRESETS } from "./settings";
 import { LedgeSettingTab } from "./settings-tab";
-import type { DockPosition } from "./types";
+import type { DockPosition, DockPresetSettings } from "./types";
 
 const POSITION_LABELS: Record<DockPosition, string> = {
   left: "Left",
@@ -21,9 +21,18 @@ const POSITION_LABELS: Record<DockPosition, string> = {
   "bottom-right": "Bottom right (90°)",
 };
 
+type LayoutNumberKey =
+  | "itemSize"
+  | "iconSize"
+  | "gap"
+  | "padding"
+  | "radius"
+  | "edgeOffset";
+
 type MutableSettingDefinition = {
   name?: string;
   desc?: string;
+  cls?: string;
   control?: {
     type?: string;
     key?: string;
@@ -34,8 +43,8 @@ type MutableSettingDefinition = {
 };
 
 /**
- * Adds the unified searchable built-in icon library plus the multi-Dock preset
- * selector to Ledge's existing declarative settings.
+ * Adds the unified searchable built-in icon library plus the multi-dock preset
+ * editor to Ledge's existing declarative settings.
  */
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   constructor(
@@ -48,7 +57,10 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
   override getSettingDefinitions(): SettingDefinitionItem[] {
     const definitions = super.getSettingDefinitions();
-    definitions.splice(1, 0, this.dockPresetDefinitions());
+    const layoutIndex = definitions.findIndex((definition) =>
+      (definition as unknown as MutableSettingDefinition).cls === "ledge-settings-panel-layout");
+    if (layoutIndex >= 0) definitions.splice(layoutIndex, 1, this.dockPresetListDefinitions());
+    else definitions.splice(1, 0, this.dockPresetListDefinitions());
     this.decorateControls(definitions);
     return definitions;
   }
@@ -86,37 +98,24 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     await super.setControlValue(key, value);
   }
 
-  private dockPresetDefinitions(): SettingDefinitionItem {
+  private dockPresetListDefinitions(): SettingDefinitionItem {
     return {
       type: "group",
-      cls: "ledge-dock-preset-selector",
+      heading: "Docks",
+      cls: "ledge-settings-panel-layout",
       items: [
         {
-          name: "Dock preset",
-          desc: `Each preset is rendered as its own Dock. One position can belong to only one Dock (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`,
+          name: "Dock presets",
+          desc: `Each dock owns one exclusive edge or corner position. Open a dock below to edit its layout (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`,
           searchable: false,
           render: (setting) => {
-            setting.addDropdown((dropdown) => {
-              for (const dock of this.ledgePlugin.settings.docks) {
-                dropdown.addOption(
-                  dock.id,
-                  `${dock.name} — ${POSITION_LABELS[dock.position]}`,
-                );
-              }
-              dropdown
-                .setValue(this.ledgePlugin.settings.selectedDockId)
-                .onChange((dockId) => {
-                  void this.ledgePlugin.selectDockPreset(dockId).then((selected) => {
-                    if (selected) this.update();
-                  });
-                });
-            });
-
+            setting.settingEl.addClass("ledge-dock-preset-toolbar");
             setting.addButton((button) => {
               button
-                .setButtonText("Add")
+                .setButtonText("Add dock")
                 .setIcon("plus")
                 .setTooltip("Add dock preset")
+                .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
                 .onClick(() => {
                   void this.ledgePlugin.createDockPreset(false).then((created) => {
                     if (!created) {
@@ -127,58 +126,208 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
                   });
                 });
             });
-
-            setting.addButton((button) => {
-              button
-                .setButtonText("Duplicate")
-                .setIcon("copy")
-                .setTooltip("Duplicate selected dock preset")
-                .onClick(() => {
-                  void this.ledgePlugin.createDockPreset(true).then((created) => {
-                    if (!created) {
-                      new Notice("All eight dock positions are already in use.");
-                      return;
-                    }
-                    this.update();
-                  });
-                });
-            });
-
-            setting.addButton((button) => {
-              button
-                .setButtonText("Delete")
-                .setIcon("trash-2")
-                .setTooltip("Delete selected dock preset")
-                .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
-                .setDestructive()
-                .onClick(() => {
-                  void this.ledgePlugin.deleteSelectedDockPreset().then((deleted) => {
-                    if (deleted) this.update();
-                  });
-                });
-            });
           },
         },
-        {
-          name: "Preset name",
-          desc: "Name used to identify this Dock while editing settings.",
-          searchable: false,
-          render: (setting) => {
-            const preset = this.ledgePlugin.getDockPresetRuntime(
-              this.ledgePlugin.settings.selectedDockId,
-            );
-            setting.addText((text) => {
-              text
-                .setPlaceholder("Dock 1")
-                .setValue(preset?.name ?? "Dock")
-                .onChange((value) => {
-                  void this.ledgePlugin.renameSelectedDockPreset(value);
-                });
-            });
-          },
-        },
+        ...this.ledgePlugin.settings.docks.map((dock) => this.dockPresetCardDefinition(dock)),
       ],
     };
+  }
+
+  private dockPresetCardDefinition(dock: DockPresetSettings): SettingDefinitionItem {
+    const selected = dock.id === this.ledgePlugin.settings.selectedDockId;
+    return {
+      name: dock.name,
+      desc: `${POSITION_LABELS[dock.position]} · ${dock.enabled ? "Enabled" : "Hidden"}`,
+      searchable: false,
+      render: (setting) => {
+        setting.settingEl.addClass("ledge-dock-preset-card");
+        setting.settingEl.classList.toggle("is-selected", selected);
+        setting.settingEl.classList.toggle("is-disabled", !dock.enabled);
+
+        setting.addButton((button) => {
+          button
+            .setButtonText(selected ? "Editing" : "Edit")
+            .setIcon(selected ? "chevron-down" : "chevron-right")
+            .setTooltip(selected ? "This dock is open" : "Open dock layout")
+            .setDisabled(selected)
+            .onClick(() => {
+              void this.ledgePlugin.selectDockPreset(dock.id).then((changed) => {
+                if (changed) this.update();
+              });
+            });
+        });
+
+        setting.addButton((button) => {
+          button
+            .setIcon("copy")
+            .setTooltip("Duplicate dock")
+            .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
+            .onClick(() => this.duplicateDock(dock.id));
+        });
+
+        setting.addButton((button) => {
+          button
+            .setIcon("trash-2")
+            .setTooltip("Delete dock")
+            .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
+            .setDestructive()
+            .onClick(() => this.deleteDock(dock.id));
+        });
+
+        if (!selected) return;
+        const body = setting.settingEl.createDiv({ cls: "ledge-dock-preset-body" });
+        this.renderDockLayoutSettings(body, dock.id);
+      },
+    };
+  }
+
+  private renderDockLayoutSettings(container: HTMLElement, dockId: string): void {
+    const preset = this.ledgePlugin.getDockPresetRuntime(dockId);
+    if (!preset) return;
+
+    new Setting(container)
+      .setName("Preset name")
+      .setDesc("Name used to identify this dock in settings.")
+      .addText((text) => {
+        text
+          .setPlaceholder("Dock 1")
+          .setValue(preset.name)
+          .onChange((value) => {
+            const current = this.ledgePlugin.getDockPresetRuntime(dockId);
+            if (!current) return;
+            current.name = value;
+            void this.ledgePlugin.saveDockPresetRuntime(dockId, false);
+          });
+      });
+
+    new Setting(container)
+      .setName("Enable dock")
+      .setDesc("Show or hide this workspace dock without deleting its preset.")
+      .addToggle((toggle) => {
+        toggle
+          .setValue(preset.enabled)
+          .onChange((value) => {
+            const current = this.ledgePlugin.getDockPresetRuntime(dockId);
+            if (!current) return;
+            current.enabled = value;
+            void this.ledgePlugin.saveDockPresetRuntime(dockId).then(() => this.update());
+          });
+      });
+
+    new Setting(container)
+      .setName("Position")
+      .setDesc("A position already assigned to another dock is not offered here.")
+      .addDropdown((dropdown) => {
+        for (const position of availableDockPositions(this.ledgePlugin.settings, dockId)) {
+          dropdown.addOption(position, POSITION_LABELS[position]);
+        }
+        dropdown
+          .setValue(preset.position)
+          .onChange((value) => {
+            const position = value as DockPosition;
+            if (!availableDockPositions(this.ledgePlugin.settings, dockId).includes(position)) return;
+            const current = this.ledgePlugin.getDockPresetRuntime(dockId);
+            if (!current) return;
+            current.position = position;
+            void this.ledgePlugin.saveDockPresetRuntime(dockId).then(() => this.update());
+          });
+      });
+
+    this.addDockSlider(container, dockId, "Item size", "Size of each dock button.", "itemSize", 30, 84, 1);
+    this.addDockSlider(
+      container,
+      dockId,
+      "Icon size",
+      "Default icon size. Individual items can override it.",
+      "iconSize",
+      14,
+      72,
+      1,
+    );
+    this.addDockSlider(container, dockId, "Gap", "Space between dock items.", "gap", 0, 32, 1);
+    this.addDockSlider(
+      container,
+      dockId,
+      "Padding",
+      "Space around items inside the dock surface.",
+      "padding",
+      0,
+      32,
+      1,
+    );
+    this.addDockSlider(
+      container,
+      dockId,
+      "Corner radius",
+      "Rounding of the dock surface and item tiles.",
+      "radius",
+      0,
+      40,
+      1,
+    );
+    this.addDockSlider(
+      container,
+      dockId,
+      "Edge offset",
+      "Move the dock inward from its selected pane edge.",
+      "edgeOffset",
+      0,
+      160,
+      1,
+    );
+  }
+
+  private addDockSlider(
+    container: HTMLElement,
+    dockId: string,
+    name: string,
+    desc: string,
+    key: LayoutNumberKey,
+    minimum: number,
+    maximum: number,
+    step: number,
+  ): void {
+    const preset = this.ledgePlugin.getDockPresetRuntime(dockId);
+    if (!preset) return;
+    const numericPreset = preset as unknown as Record<LayoutNumberKey, number>;
+    new Setting(container)
+      .setName(name)
+      .setDesc(desc)
+      .addSlider((slider) => {
+        slider
+          .setLimits(minimum, maximum, step)
+          .setValue(numericPreset[key])
+          .setDynamicTooltip()
+          .onChange((value) => {
+            const current = this.ledgePlugin.getDockPresetRuntime(dockId);
+            if (!current) return;
+            const numericCurrent = current as unknown as Record<LayoutNumberKey, number>;
+            numericCurrent[key] = value;
+            void this.ledgePlugin.saveDockPresetRuntime(dockId);
+          });
+      });
+  }
+
+  private duplicateDock(dockId: string): void {
+    void this.ledgePlugin.selectDockPreset(dockId).then((selected) => {
+      if (!selected) return false;
+      return this.ledgePlugin.createDockPreset(true);
+    }).then((created) => {
+      if (created === false) {
+        new Notice("All eight dock positions are already in use.");
+        return;
+      }
+      if (created) this.update();
+    });
+  }
+
+  private deleteDock(dockId: string): void {
+    void this.ledgePlugin.selectDockPreset(dockId).then((selected) => {
+      if (!selected) return false;
+      return this.ledgePlugin.deleteSelectedDockPreset();
+    }).then((deleted) => {
+      if (deleted) this.update();
+    });
   }
 
   private decorateControls(definitions: SettingDefinitionItem[]): void {
