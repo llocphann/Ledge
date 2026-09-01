@@ -21,7 +21,7 @@
 - Keep remembered Icon in vault paths synchronized when their files or parent folders are renamed, even while the item is temporarily using a built-in icon.
 - Render all four corner triggers as two rounded pill arms meeting at 90 degrees instead of a square corner block.
 - Apply Auto-hide immediately when switching it from Off to On, while clearing stale reveal/hide timers across mode changes.
-- Use Node.js 22 for development, CI, and release tooling.
+- Use Node.js 22 across development, CI, and release tooling.
 
 ## 1.1.1
 
