@@ -13,14 +13,15 @@ type MutableSettingDefinition = {
   control?: {
     type?: string;
     key?: string;
+    options?: Record<string, string>;
   };
   render?: (setting: Setting) => void;
   items?: SettingDefinitionItem[];
 };
 
 /**
- * Adds the searchable Obsidian icon registry to Ledge's existing declarative
- * settings without changing the stored Dock item schema.
+ * Adds the unified searchable built-in icon library to Ledge's existing
+ * declarative settings without changing the stored Dock item schema.
  */
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   constructor(
@@ -46,12 +47,22 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
       const control = mutable.control;
       const key = control?.key;
+      if (
+        control?.type === "dropdown"
+        && key?.startsWith("item:")
+        && key.endsWith(":iconSource")
+        && control.options
+      ) {
+        control.options = { ...control.options, lucide: "Built-in icon" };
+        continue;
+      }
+
       if (control?.type !== "text" || !key?.startsWith("item:") || !key.endsWith(":icon")) {
         continue;
       }
 
       mutable.name = "Icon";
-      mutable.desc = "Choose from Obsidian's searchable icon library or type an icon ID manually.";
+      mutable.desc = "Choose from the built-in icon library or type an Obsidian icon ID manually.";
       delete mutable.control;
       mutable.render = (setting) => this.renderIconControl(setting, key);
     }
