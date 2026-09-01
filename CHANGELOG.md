@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.0.0
+
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
 - Simplify settings into one continuous Dock-first page: Dock configuration comes first, Data follows below the Dock sections, and About remains the final footer instead of using separate Docks/Data/About destinations.
 - Replace Dock preset cards with one compact preset-button row followed by a trailing `+` button; keep rename, duplicate, and delete actions in the selected-preset management row instead of cluttering the preset switcher.
@@ -19,7 +21,7 @@
 - Keep remembered Icon in vault paths synchronized when their files or parent folders are renamed, even while the item is temporarily using a built-in icon.
 - Render all four corner triggers as two rounded pill arms meeting at 90 degrees instead of a square corner block.
 - Apply Auto-hide immediately when switching it from Off to On, while clearing stale reveal/hide timers across mode changes.
-- Use Node.js 22 for development and CI tooling.
+- Use Node.js 22 for development, CI, and release tooling.
 
 ## 1.1.1
 
