@@ -31,7 +31,7 @@ type DockSettingsSection =
   | "trigger"
   | "appearance";
 
-type WorkspaceSettingsTab = "docks" | "data" | "about";
+type WorkspaceSettingsTab = "docks" | "data";
 
 const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
   "items",
@@ -67,12 +67,12 @@ const WORKSPACE_TABS: Array<{
 }> = [
   { id: "docks", label: "Docks", icon: "panels-top-left" },
   { id: "data", label: "Data", icon: "database-backup" },
-  { id: "about", label: "About", icon: "info" },
 ];
 
 type MutableSettingDefinition = {
   name?: string;
   desc?: string;
+  heading?: string;
   cls?: string;
   control?: {
     type?: string;
@@ -112,6 +112,10 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       const mutable = definition as unknown as MutableSettingDefinition;
       if (mutable.cls === "ledge-settings-tabs-group") {
         definitions.push(this.workspaceNavigationDefinitions());
+        continue;
+      }
+      if (mutable.cls === "ledge-settings-panel-about") {
+        definitions.push(this.aboutFooterDefinitions(definition));
         continue;
       }
 
@@ -242,6 +246,33 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       if (!(workspace instanceof HTMLElement)) continue;
       workspace.hidden = this.activeWorkspaceTab !== "docks";
     }
+  }
+
+  private aboutFooterDefinitions(definition: SettingDefinitionItem): SettingDefinitionItem {
+    const mutable = definition as unknown as MutableSettingDefinition;
+    const originalItems = Array.isArray(mutable.items) ? mutable.items : [];
+    const legacySummaryName = `Ledge ${this.ledgePlugin.manifest.version}`;
+    const retainedItems = originalItems.filter((item) => {
+      const candidate = item as unknown as MutableSettingDefinition;
+      return candidate.name !== legacySummaryName;
+    });
+
+    mutable.heading = "About";
+    mutable.cls = "ledge-settings-about-footer";
+    mutable.items = [
+      {
+        name: "Version",
+        desc: this.ledgePlugin.manifest.version,
+        searchable: false,
+      },
+      {
+        name: "Author",
+        desc: this.ledgePlugin.manifest.author || "llocphann",
+        searchable: false,
+      },
+      ...retainedItems,
+    ];
+    return definition;
   }
 
   private sectionForDefinition(definition: SettingDefinitionItem): DockSettingsSection | null {
