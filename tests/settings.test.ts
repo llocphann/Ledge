@@ -2,8 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_SETTINGS,
+  addDockPreset,
+  applyDockPreset,
+  availableDockPositions,
   hasLegacyHotCornerSettings,
+  hasLegacySingleDockSettings,
   normalizeSettings,
+  syncSelectedDockPreset,
 } from "../src/settings";
 
 void test("fresh installs receive usable defaults", () => {
@@ -23,6 +28,9 @@ void test("fresh installs receive usable defaults", () => {
   assert.ok(settings.items.every((item) => item.vaultIconPath === ""));
   assert.deepEqual(settings.includeRules, []);
   assert.deepEqual(settings.excludeRules, []);
+  assert.equal(settings.docks.length, 1);
+  assert.equal(settings.docks[0]?.name, "Dock 1");
+  assert.equal(settings.selectedDockId, settings.docks[0]?.id);
 });
 
 void test("bounded settings and supported enums survive loading", () => {
@@ -133,6 +141,59 @@ void test("legacy hot-corner appearance migrates to the edge trigger", () => {
   assert.equal(settings.triggerBorderWidth, 3);
   assert.equal(settings.triggerBorderColor, "#778899");
   assert.equal("hotCornersEnabled" in settings, false);
+});
+
+void test("legacy single-Dock settings migrate into Dock 1 without losing configuration", () => {
+  const legacy = {
+    position: "bottom" as const,
+    itemSize: 57,
+    items: [{ id: "home", label: "Home", target: "Home.md", icon: "home" }],
+  };
+  assert.equal(hasLegacySingleDockSettings(legacy), true);
+
+  const settings = normalizeSettings(legacy);
+  assert.equal(settings.docks.length, 1);
+  assert.equal(settings.docks[0]?.position, "bottom");
+  assert.equal(settings.docks[0]?.itemSize, 57);
+  assert.equal(settings.docks[0]?.items[0]?.target, "Home.md");
+});
+
+void test("duplicate Dock positions are repaired deterministically", () => {
+  const settings = normalizeSettings({
+    selectedDockId: "one",
+    docks: [
+      { id: "one", name: "One", position: "left" },
+      { id: "two", name: "Two", position: "left" },
+      { id: "three", name: "Three", position: "top" },
+    ],
+  });
+
+  assert.deepEqual(settings.docks.map((dock) => dock.position), ["left", "right", "top"]);
+  assert.equal(new Set(settings.docks.map((dock) => dock.position)).size, settings.docks.length);
+  assert.equal(availableDockPositions(settings, "two").includes("left"), false);
+  assert.equal(availableDockPositions(settings, "two").includes("top"), false);
+  assert.equal(availableDockPositions(settings, "two").includes("right"), true);
+});
+
+void test("adding Dock presets consumes every position exactly once and then stops", () => {
+  const settings = normalizeSettings(null);
+  for (let index = 1; index < 8; index += 1) {
+    assert.ok(addDockPreset(settings));
+  }
+  assert.equal(settings.docks.length, 8);
+  assert.equal(new Set(settings.docks.map((dock) => dock.position)).size, 8);
+  assert.equal(addDockPreset(settings), null);
+});
+
+void test("switching presets preserves edits in the previously selected Dock", () => {
+  const settings = normalizeSettings(null);
+  settings.itemSize = 63;
+  syncSelectedDockPreset(settings);
+  const firstId = settings.selectedDockId;
+  const second = addDockPreset(settings);
+  assert.ok(second);
+  assert.equal(applyDockPreset(settings, firstId), true);
+  assert.equal(settings.itemSize, 63);
 });
 
 void test("duplicate item IDs are repaired without losing order", () => {
