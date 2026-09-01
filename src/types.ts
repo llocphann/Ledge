@@ -52,7 +52,7 @@ export interface DockItemSettings {
   tileGradientEnd: string;
 }
 
-export interface LedgeSettings {
+export interface DockSettings {
   enabled: boolean;
   position: DockPosition;
   autoHide: boolean;
@@ -108,6 +108,21 @@ export interface LedgeSettings {
   includeRules: DockVisibilityRule[];
   excludeRules: DockVisibilityRule[];
   items: DockItemSettings[];
+}
+
+export interface DockPresetSettings extends DockSettings {
+  id: string;
+  name: string;
+}
+
+/**
+ * The top-level DockSettings fields mirror the currently selected preset so
+ * the existing declarative settings UI can keep editing one preset at a time.
+ * `docks` is the canonical list rendered simultaneously in the workspace.
+ */
+export interface LedgeSettings extends DockSettings {
+  selectedDockId: string;
+  docks: DockPresetSettings[];
 }
 
 export interface CornerSlot {
