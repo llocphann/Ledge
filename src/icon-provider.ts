@@ -27,6 +27,7 @@ interface IconifySearchResponse {
 }
 
 const ICONIFY_API = "https://api.iconify.design";
+const OBSIDIAN_ICON_SIZE = 24;
 const FETCH_CHUNK_SIZE = 20;
 const registeredIconIds = new Set<string>();
 
@@ -34,17 +35,21 @@ function isSupportedPrefix(value: string): value is IconifyPrefix {
   return ICONIFY_COLLECTIONS.some((collection) => collection.prefix === value);
 }
 
-function iconSvg(data: IconifyIconData, defaults: IconifyIconResponse): string {
-  const width = data.width ?? defaults.width ?? 24;
-  const height = data.height ?? defaults.height ?? 24;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" aria-hidden="true">${data.body}</svg>`;
+function iconBody(data: IconifyIconData, defaults: IconifyIconResponse): string {
+  const width = data.width ?? defaults.width ?? OBSIDIAN_ICON_SIZE;
+  const height = data.height ?? defaults.height ?? OBSIDIAN_ICON_SIZE;
+  if (width === OBSIDIAN_ICON_SIZE && height === OBSIDIAN_ICON_SIZE) return data.body;
+
+  const scaleX = OBSIDIAN_ICON_SIZE / width;
+  const scaleY = OBSIDIAN_ICON_SIZE / height;
+  return `<g transform="scale(${scaleX} ${scaleY})">${data.body}</g>`;
 }
 
 function registerResponse(prefix: IconifyPrefix, response: IconifyIconResponse): void {
   if (!response.icons) return;
   for (const [name, data] of Object.entries(response.icons)) {
     const iconId = makeIconifyId(prefix, name);
-    addIcon(iconId, iconSvg(data, response));
+    addIcon(iconId, iconBody(data, response));
     registeredIconIds.add(iconId);
   }
 }
