@@ -331,12 +331,15 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         });
         setting.controlEl.setCssStyles({
           width: "100%",
-          justifyContent: "flex-start",
+          justifyContent: "center",
+          flexWrap: "wrap",
+          gap: "var(--size-4-1)",
         });
 
         const tabList = setting.controlEl.createDiv({
-          cls: "ledge-settings-tabs ledge-dock-section-tabs",
+          cls: "ledge-dock-section-tabs",
         });
+        tabList.setCssStyles({ display: "contents" });
         tabList.setAttribute("role", "tablist");
         tabList.setAttribute("aria-label", "Dock settings sections");
         const buttons: HTMLButtonElement[] = [];
