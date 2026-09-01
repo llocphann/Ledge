@@ -9,8 +9,8 @@ import {
 
 void test("external icon cache round-trips selected Iconify bodies", () => {
   const source = new Map([
-    ["iconify:mdi:home", "<path d=\"M1 1h22v22H1z\"/>"] ,
-    ["iconify:tabler:book", "<path d=\"M4 3h16v18H4z\"/>"] ,
+    ["iconify:mdi:home", "<path d=\"M1 1h22v22H1z\"/>"],
+    ["iconify:tabler:book", "<path d=\"M4 3h16v18H4z\"/>"],
   ]);
   const serialized = serializeIconCache(source);
   const restored = parseIconCache({ [ICON_CACHE_DATA_KEY]: serialized });
