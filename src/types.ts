@@ -43,6 +43,8 @@ export interface DockItemSettings {
   target: string;
   iconSource: IconSource;
   icon: string;
+  builtInIcon: string;
+  vaultIconPath: string;
   iconRenderMode: IconRenderMode;
   iconSize: number;
   iconColor: string;
