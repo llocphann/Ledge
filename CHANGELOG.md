@@ -2,11 +2,16 @@
 
 ## Unreleased
 
+- Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
+- Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
+- Migrate the existing single-Dock configuration into `Dock 1` automatically without losing its layout, items, visibility rules, trigger, or appearance settings.
+- Upgrade settings export schema to v2 for multi-Dock backups while keeping schema-v1 imports compatible.
 - Expand the Dock built-in icon picker into a compact grid that shows only icon and name while searching Obsidian/Lucide, Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons through one Built-in icon source.
 - Load the additional open-source icon collections from Iconify on demand instead of bundling thousands of SVG files into `main.js`.
 - Persist external built-in icon choices retained by Dock items in Ledge plugin data and restore them before Dock startup, so they continue to render offline after reloads and after switching away from and back to Icon in vault.
 - Switch the Dock item icon control with its source: Built-in icon shows the icon picker, Icon in vault shows the file path and image-rendering controls, and each source preserves its previous value when switching back and forth.
 - Render the trigger pill with square 90-degree geometry at all four corner positions.
+- Use Node.js 22 for development and CI tooling.
 
 ## 1.1.1
 
