@@ -1,0 +1,60 @@
+name: One-shot auto-hide transition fix
+
+on:
+  push:
+    branches: [prerelease]
+    paths:
+      - .github/workflows/one-shot-autohide-transition.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+      - name: Fix auto-hide state transition
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dock = Path('src/dock.ts')
+          text = dock.read_text()
+
+          old = '''  private visible = false;\n  private renderVersion = 0;\n'''
+          new = '''  private visible = false;\n  private previousAutoHide: boolean | null = null;\n  private renderVersion = 0;\n'''
+          if old not in text:
+              raise SystemExit('DockInstance state pattern not found')
+          text = text.replace(old, new, 1)
+
+          old = '''  render(): void {\n    const settings = this.controller.settings();\n    this.renderVersion += 1;\n'''
+          new = '''  render(): void {\n    const settings = this.controller.settings();\n    const autoHideChanged = this.previousAutoHide !== null\n      && this.previousAutoHide !== settings.autoHide;\n    const autoHideJustEnabled = autoHideChanged && settings.autoHide;\n    this.previousAutoHide = settings.autoHide;\n    if (autoHideChanged) this.clearTimers();\n    this.renderVersion += 1;\n'''
+          if old not in text:
+              raise SystemExit('render header pattern not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    if (!settings.autoHide) this.setVisible(true);\n    else this.setVisible(this.visible);\n'''
+          new = '''    if (!settings.autoHide) this.setVisible(true);\n    else if (autoHideJustEnabled) this.setVisible(false);\n    else this.setVisible(this.visible);\n'''
+          if old not in text:
+              raise SystemExit('auto-hide visibility pattern not found')
+          dock.write_text(text.replace(old, new, 1))
+
+          tests = Path('tests/multi-dock.test.ts')
+          text = tests.read_text()
+          anchor = '''void test("vault icon renames update the remembered path even while built-in is active", () => {\n'''
+          test_block = '''void test("enabling auto-hide hides an already-visible Dock immediately", () => {\n  const source = fs.readFileSync("src/dock.ts", "utf8");\n\n  assert.match(source, /private previousAutoHide: boolean \\| null = null/);\n  assert.match(source, /const autoHideChanged = this\\.previousAutoHide !== null[\\s\\S]*this\\.previousAutoHide !== settings\\.autoHide/);\n  assert.match(source, /const autoHideJustEnabled = autoHideChanged && settings\\.autoHide/);\n  assert.match(source, /if \\(autoHideChanged\\) this\\.clearTimers\\(\\)/);\n  assert.match(source, /else if \\(autoHideJustEnabled\\) this\\.setVisible\\(false\\)/);\n});\n\n'''
+          if anchor not in text:
+              raise SystemExit('multi-dock test anchor not found')
+          tests.write_text(text.replace(anchor, test_block + anchor, 1))
+          PY
+      - name: Commit fix and remove one-shot workflow
+        run: |
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git rm .github/workflows/one-shot-autohide-transition.yml
+          git add src/dock.ts tests/multi-dock.test.ts
+          git commit -m "Fix auto-hide enable transition"
+          git push origin HEAD:prerelease
