@@ -1,0 +1,87 @@
+name: One-shot corner trigger patch
+
+on:
+  push:
+    branches: [prerelease]
+    paths:
+      - .github/workflows/one-shot-corner-trigger.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+      - name: Apply corner trigger patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          dock = Path('src/dock.ts')
+          text = dock.read_text()
+          old = '    if (position !== "top" && position !== "bottom") return fallbackRect;\n'
+          new = '''    const usesActiveViewAnchor = position === "top"\n      || position === "bottom"\n      || position === "top-left"\n      || position === "top-right";\n    if (!usesActiveViewAnchor) return fallbackRect;\n'''
+          if old not in text:
+              raise SystemExit('dock anchor pattern not found')
+          text = text.replace(old, new, 1)
+
+          old = '''    } else {\n      width = Math.max(triggerSize, 34);\n      height = width;\n      left = position.endsWith("right") ? rect.right - width : rect.left;\n      top = position.startsWith("bottom") ? rect.bottom - height : rect.top;\n    }\n'''
+          new = '''    } else {\n      const cornerExtent = Math.max(triggerSize * 2.6, 40);\n      width = cornerExtent;\n      height = cornerExtent;\n      left = position.endsWith("right") ? rect.right - width : rect.left;\n      top = position.startsWith("bottom") ? rect.bottom - height : rect.top;\n    }\n'''
+          if old not in text:
+              raise SystemExit('corner trigger size pattern not found')
+          dock.write_text(text.replace(old, new, 1))
+
+          css = Path('styles.css')
+          text = css.read_text()
+          replacements = [
+              (
+                  '.ledge-dock-trigger::before {\n',
+                  '.ledge-dock-trigger::before,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {\n',
+              ),
+              (
+                  '''.ledge-dock-trigger:hover::before,\n.ledge-dock-trigger:focus-visible::before,\n.ledge-dock-trigger.is-visible::before {\n''',
+                  '''.ledge-dock-trigger:hover::before,\n.ledge-dock-trigger:focus-visible::before,\n.ledge-dock-trigger.is-visible::before,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:hover::after,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:focus-visible::after,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger.is-visible::after {\n''',
+              ),
+              (
+                  '.ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before {\n',
+                  '.ledge-dock-root.is-trigger-hidden .ledge-dock-trigger::before,\n.ledge-dock-root.is-trigger-hidden[data-position*="-"] .ledge-dock-trigger::after {\n',
+              ),
+              (
+                  '.ledge-dock-root.is-trigger-background-hidden .ledge-dock-trigger::before {\n',
+                  '.ledge-dock-root.is-trigger-background-hidden .ledge-dock-trigger::before,\n.ledge-dock-root.is-trigger-background-hidden[data-position*="-"] .ledge-dock-trigger::after {\n',
+              ),
+              (
+                  '.ledge-dock-root.is-trigger-border-hidden .ledge-dock-trigger::before {\n',
+                  '.ledge-dock-root.is-trigger-border-hidden .ledge-dock-trigger::before,\n.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger::after {\n',
+              ),
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'css selector pattern not found: {old!r}')
+              text = text.replace(old, new, 1)
+
+          old = '''.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {\n  width: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));\n  height: min(100%, max(var(--ledge-trigger-surface-thickness), 54%));\n  border-radius: 0;\n}\n\n.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {\n  top: 0;\n  left: 0;\n  border-top: 0;\n  border-left: 0;\n}\n\n.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {\n  top: 0;\n  right: 0;\n  border-top: 0;\n  border-right: 0;\n}\n\n.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {\n  bottom: 0;\n  left: 0;\n  border-bottom: 0;\n  border-left: 0;\n}\n\n.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {\n  right: 0;\n  bottom: 0;\n  border-right: 0;\n  border-bottom: 0;\n}\n'''
+          new = '''.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {\n  width: 72%;\n  height: min(100%, var(--ledge-trigger-surface-thickness));\n  border-radius: var(--ledge-trigger-radius);\n}\n\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {\n  width: min(100%, var(--ledge-trigger-surface-thickness));\n  height: 72%;\n  border-radius: var(--ledge-trigger-radius);\n}\n\n.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before,\n.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::after {\n  top: 0;\n  left: 0;\n}\n\n.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before,\n.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::after {\n  top: 0;\n  right: 0;\n}\n\n.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before,\n.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::after {\n  bottom: 0;\n  left: 0;\n}\n\n.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before,\n.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {\n  right: 0;\n  bottom: 0;\n}\n'''
+          if old not in text:
+              raise SystemExit('corner square css block not found')
+          css.write_text(text.replace(old, new, 1))
+
+          tests = Path('tests/multi-dock.test.ts')
+          text = tests.read_text()
+          old = '''void test("top and bottom docks anchor to the active note content area", () => {\n  const source = fs.readFileSync("src/dock.ts", "utf8");\n\n  assert.match(source, /anchorRectForPosition/);\n  assert.match(source, /position !== "top" && position !== "bottom"/);\n  assert.match(source, /contentEl\\?: HTMLElement/);\n  assert.match(source, /querySelector<HTMLElement>\\("\\.view-content"\\)/);\n  assert.match(source, /this\\.positionTrigger\\(rect, position/);\n});\n'''
+          new = '''void test("top edge and top corners anchor to the active note content area", () => {\n  const source = fs.readFileSync("src/dock.ts", "utf8");\n\n  assert.match(source, /anchorRectForPosition/);\n  assert.match(source, /position === "top-left"/);\n  assert.match(source, /position === "top-right"/);\n  assert.match(source, /contentEl\\?: HTMLElement/);\n  assert.match(source, /querySelector<HTMLElement>\\("\\.view-content"\\)/);\n  assert.match(source, /this\\.positionTrigger\\(rect, position/);\n});\n\nvoid test("corner triggers render as perpendicular pill arms instead of a square", () => {\n  const source = fs.readFileSync("src/dock.ts", "utf8");\n  const styles = fs.readFileSync("styles.css", "utf8");\n\n  assert.match(source, /const cornerExtent = Math\\.max\\(triggerSize \\* 2\\.6, 40\\)/);\n  assert.match(styles, /data-position\\*="-"[^\\n]*ledge-dock-trigger::after/);\n  assert.match(styles, /width: 72%/);\n  assert.match(styles, /height: 72%/);\n  assert.doesNotMatch(styles, /data-position\\*="-"[^\\{]*\\{[^\\}]*border-radius: 0;/s);\n});\n'''
+          if old not in text:
+              raise SystemExit('multi-dock anchor test pattern not found')
+          tests.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add src/dock.ts styles.css tests/multi-dock.test.ts
+          git commit -m "Refine corner trigger pills and top anchors [skip ci]"
+          git push origin HEAD:prerelease
