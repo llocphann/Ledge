@@ -48,7 +48,8 @@ jobs:
           NODE
       - name: Commit 2.0.0 release state
         run: |
-          git add package.json package-lock.json manifest.json versions.json main.js
+          git add package.json package-lock.json manifest.json versions.json
+          git add -f main.js
           git commit -m "Release 2.0.0"
       - name: Remove one-shot workflow
         run: |
