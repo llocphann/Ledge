@@ -2,9 +2,10 @@
 
 Ledge adds a configurable navigation dock to the edge of your Obsidian workspace. It remains available while you move between notes, Bases, canvases, and Custom Views.
 
-![Ledge left dock](assets/left-dock.png)
-
-![Ledge bottom-left dock](assets/bottom-left-dock.png)
+<p align="center">
+  <img src="assets/left-dock.png" alt="Ledge left dock" width="49%">
+  <img src="assets/bottom-left-dock.png" alt="Ledge bottom-left dock" width="49%">
+</p>
 
 ## Features
 
