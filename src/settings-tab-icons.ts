@@ -1,4 +1,9 @@
-import { App, setIcon, type SettingDefinitionItem } from "obsidian";
+import {
+  App,
+  setIcon,
+  type SettingDefinitionItem,
+  type SettingGroupItem,
+} from "obsidian";
 import { IconPickerModal } from "./icon-picker";
 import type LedgePlugin from "./main";
 import { LedgeSettingTab } from "./settings-tab";
@@ -26,7 +31,7 @@ export class LedgeSettingTabWithIcons extends LedgeSettingTab {
   private iconLibraryDefinition(
     item: DockItemSettings,
     index: number,
-  ): SettingDefinitionItem {
+  ): SettingGroupItem {
     const itemName = item.label || item.target || `Item ${index + 1}`;
     return {
       name: itemName,
@@ -40,7 +45,7 @@ export class LedgeSettingTabWithIcons extends LedgeSettingTab {
               .setButtonText("Use built-in icons")
               .onClick(() => {
                 item.iconSource = "lucide";
-                if (!item.icon) item.icon = "circle";
+                item.icon = "circle";
                 void this.plugin.saveSettings().then(() => this.update());
               }),
           );
