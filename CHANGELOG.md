@@ -3,9 +3,11 @@
 ## Unreleased
 
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
-- Restructure settings around a Dock-first hierarchy: the top level contains Docks and Data, while each open Dock owns Items, Layout, Behavior, Visibility, Trigger, and Appearance; Items opens first for faster shortcut management.
-- Replace the standalone About tab with a shared footer visible under every settings view, showing the current plugin version and author from the manifest alongside restore-defaults and support actions.
-- Keep Dock preset rows visually neutral and reuse the existing declarative Dock section definitions instead of manually duplicating Layout controls, preventing stale custom-render bodies from producing repeated settings.
+- Simplify settings into one continuous Dock-first page: Dock configuration comes first, Data follows below the Dock sections, and About remains the final footer instead of using separate Docks/Data/About destinations.
+- Replace Dock preset cards with one compact preset-button row followed by a trailing `+` button; keep rename, duplicate, and delete actions in the selected-preset management row instead of cluttering the preset switcher.
+- Move Items, Layout, Behavior, Visibility, Trigger, and Appearance into a separate full-width section bar below the preset controls, with spacing and a divider so preset selection and Dock-section selection are visually distinct.
+- Keep About as a shared footer showing the current plugin version and author from the manifest alongside restore-defaults and support actions.
+- Reuse the existing declarative Dock section definitions instead of manually duplicating Layout controls, preventing stale custom-render bodies from producing repeated settings.
 - Anchor straight Top and Bottom Docks, including their auto-hide triggers, to the active view content area instead of the entire root workspace; left, right, and corner positions retain their existing root-pane placement.
 - Make Dock positions exclusive across presets: once one Dock uses left, right, top, bottom, or a corner position, that position is removed from every other Dock's Position dropdown; imported duplicate positions are repaired deterministically.
 - Migrate the existing single-Dock configuration into `Dock 1` automatically without losing its layout, items, visibility rules, trigger, or appearance settings.
