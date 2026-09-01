@@ -11,8 +11,10 @@ void test("settings use one Dock-first hierarchy instead of repeating preset sel
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
   const baseSettings = fs.readFileSync("src/settings-tab.ts", "utf8");
 
-  assert.match(source, /type WorkspaceSettingsTab = "docks" \| "data" \| "about"/);
+  assert.match(source, /type WorkspaceSettingsTab = "docks" \| "data"/);
   assert.match(source, /\{ id: "docks", label: "Docks"/);
+  assert.match(source, /\{ id: "data", label: "Data"/);
+  assert.doesNotMatch(source, /\{ id: "about", label: "About"/);
   assert.match(source, /const DOCK_SETTINGS_SECTIONS[\s\S]*"items",[\s\S]*"layout"/);
   assert.match(source, /definitions\.push\(this\.dockWorkspaceDefinitions\(\)\)/);
   assert.match(source, /heading: "Docks"/);
@@ -29,6 +31,16 @@ void test("settings use one Dock-first hierarchy instead of repeating preset sel
   assert.match(baseSettings, /heading: "Edge trigger"/);
   assert.match(baseSettings, /heading: "Appearance"/);
   assert.match(baseSettings, /heading: "Dock items"/);
+});
+
+void test("About is shared metadata at the bottom of every top-level settings tab", () => {
+  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(source, /aboutFooterDefinitions\(definition\)/);
+  assert.match(source, /mutable\.cls = "ledge-settings-about-footer"/);
+  assert.match(source, /name: "Version"[\s\S]*this\.ledgePlugin\.manifest\.version/);
+  assert.match(source, /name: "Author"[\s\S]*this\.ledgePlugin\.manifest\.author/);
+  assert.doesNotMatch(source, /WorkspaceSettingsTab = [^\n]*about/);
 });
 
 void test("every Dock section is scoped by the open preset and Items is the first task", () => {
