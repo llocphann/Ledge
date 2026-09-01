@@ -1,7 +1,7 @@
-import { App, Modal, getIconIds, setIcon } from "obsidian";
+import { App, Modal, Setting, getIconIds } from "obsidian";
 
 const LUCIDE_PREFIX = "lucide-";
-const SEARCH_RESULT_LIMIT = 240;
+const SEARCH_RESULT_LIMIT = 120;
 
 const DEFAULT_DOCK_ICONS = [
   "home",
@@ -121,31 +121,23 @@ export class IconPickerModal extends Modal {
   }
 
   onOpen(): void {
-    this.titleEl.setText("Choose a Lucide icon");
+    this.titleEl.setText("Choose an icon");
     this.contentEl.empty();
-    this.addStyles();
 
-    const search = this.contentEl.createEl("input", {
-      cls: "ledge-icon-picker-search",
-      attr: {
-        type: "search",
-        placeholder: `Search ${this.allIcons.length.toLocaleString()} icons…`,
-        "aria-label": "Search Lucide icons",
-        autocomplete: "off",
-      },
-    });
-    const status = this.contentEl.createDiv({ cls: "ledge-icon-picker-status" });
-    const grid = this.contentEl.createDiv({ cls: "ledge-icon-picker-grid" });
+    let query = "";
+    let searchInput: HTMLInputElement | null = null;
+    const status = this.contentEl.createEl("p", { cls: "setting-item-description" });
+    const results = this.contentEl.createDiv();
 
     const render = (): void => {
-      const query = search.value.trim().toLowerCase();
+      const normalizedQuery = query.trim().toLowerCase();
       const available = new Set(this.allIcons);
       let icons: string[];
 
-      if (query) {
+      if (normalizedQuery) {
         icons = this.allIcons
-          .filter((icon) => matchesQuery(icon, query))
-          .sort((left, right) => compareMatches(left, right, query));
+          .filter((icon) => matchesQuery(icon, normalizedQuery))
+          .sort((left, right) => compareMatches(left, right, normalizedQuery));
       } else {
         const suggested = DEFAULT_DOCK_ICONS.filter((icon) => available.has(icon));
         icons = this.currentIcon && available.has(this.currentIcon)
@@ -154,14 +146,14 @@ export class IconPickerModal extends Modal {
       }
 
       const visibleIcons = icons.slice(0, SEARCH_RESULT_LIMIT);
-      grid.empty();
+      results.empty();
 
       if (visibleIcons.length === 0) {
         status.setText("No matching icons");
         return;
       }
 
-      if (!query) {
+      if (!normalizedQuery) {
         status.setText(`Popular dock icons · ${this.allIcons.length.toLocaleString()} available in Obsidian`);
       } else if (icons.length > SEARCH_RESULT_LIMIT) {
         status.setText(`${icons.length.toLocaleString()} matches · showing the first ${SEARCH_RESULT_LIMIT}`);
@@ -170,81 +162,37 @@ export class IconPickerModal extends Modal {
       }
 
       for (const icon of visibleIcons) {
-        const button = grid.createEl("button", {
-          cls: `ledge-icon-picker-item${icon === this.currentIcon ? " is-selected" : ""}`,
-          attr: {
-            type: "button",
-            title: icon,
-            "aria-label": `Use ${icon} icon`,
-            "aria-pressed": String(icon === this.currentIcon),
-          },
-        });
-        const preview = button.createSpan({ cls: "ledge-icon-picker-preview" });
-        setIcon(preview, icon);
-        button.createSpan({ cls: "ledge-icon-picker-name", text: icon });
-        button.addEventListener("click", () => {
-          this.onChoose(icon);
-          this.close();
-        });
+        const row = new Setting(results).setName(icon);
+        if (icon === this.currentIcon) row.setDesc("Current icon");
+        row.addButton((button) =>
+          button
+            .setIcon(icon)
+            .setTooltip(`Use ${icon}`)
+            .onClick(() => {
+              this.onChoose(icon);
+              this.close();
+            }),
+        );
       }
     };
 
-    search.addEventListener("input", render);
+    new Setting(this.contentEl)
+      .setName("Search icons")
+      .addSearch((search) => {
+        searchInput = search.inputEl;
+        search
+          .setPlaceholder(`Search ${this.allIcons.length.toLocaleString()} icons…`)
+          .onChange((value) => {
+            query = value;
+            render();
+          });
+      });
+
     render();
-    search.focus();
+    searchInput?.focus();
   }
 
   onClose(): void {
     this.contentEl.empty();
-  }
-
-  private addStyles(): void {
-    this.contentEl.createEl("style", {
-      text: `
-        .ledge-icon-picker-search {
-          width: 100%;
-          margin-bottom: var(--size-4-2);
-        }
-        .ledge-icon-picker-status {
-          color: var(--text-muted);
-          font-size: var(--font-ui-smaller);
-          margin-bottom: var(--size-4-3);
-        }
-        .ledge-icon-picker-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-          gap: var(--size-4-2);
-          max-height: min(60vh, 560px);
-          overflow-y: auto;
-          padding: var(--size-4-1);
-        }
-        .ledge-icon-picker-item {
-          display: flex;
-          min-width: 0;
-          align-items: center;
-          gap: var(--size-4-2);
-          justify-content: flex-start;
-          padding: var(--size-4-2);
-        }
-        .ledge-icon-picker-item.is-selected {
-          box-shadow: 0 0 0 2px var(--interactive-accent);
-        }
-        .ledge-icon-picker-preview {
-          display: inline-flex;
-          flex: 0 0 auto;
-        }
-        .ledge-icon-picker-preview > svg {
-          width: 18px;
-          height: 18px;
-        }
-        .ledge-icon-picker-name {
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: var(--font-ui-smaller);
-        }
-      `,
-    });
   }
 }
