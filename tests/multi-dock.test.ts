@@ -7,21 +7,17 @@ import {
   normalizeSettings,
 } from "../src/settings";
 
-void test("settings use one Dock-first hierarchy instead of repeating preset selectors", () => {
+void test("settings use one page with Dock sections followed by Data and About", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
   const baseSettings = fs.readFileSync("src/settings-tab.ts", "utf8");
 
-  assert.match(source, /type WorkspaceSettingsTab = "docks" \| "data"/);
-  assert.match(source, /\{ id: "docks", label: "Docks"/);
-  assert.match(source, /\{ id: "data", label: "Data"/);
-  assert.doesNotMatch(source, /\{ id: "about", label: "About"/);
-  assert.match(source, /const DOCK_SETTINGS_SECTIONS[\s\S]*"items",[\s\S]*"layout"/);
+  assert.doesNotMatch(source, /WorkspaceSettingsTab|WORKSPACE_TABS/);
+  assert.match(source, /if \(mutable\.cls === "ledge-settings-tabs-group"\) continue/);
+  assert.match(source, /mutable\.cls === "ledge-settings-panel-data"/);
+  assert.match(source, /mutable\.cls = "ledge-settings-data-inline"/);
+  assert.match(source, /aboutFooterDefinitions\(definition\)/);
   assert.match(source, /definitions\.push\(this\.dockWorkspaceDefinitions\(\)\)/);
   assert.match(source, /heading: "Docks"/);
-  assert.match(source, /Every setting in these sections belongs only to the open Dock/);
-  assert.match(source, /renderDockSectionNavigation/);
-  assert.doesNotMatch(source, /dockPresetListDefinitions\(section\)/);
-  assert.doesNotMatch(source, /renderDockLayoutSettings/);
 
   // Existing declarative definitions remain the single source of truth for all
   // Dock features instead of duplicating controls in the preset UI.
@@ -31,37 +27,39 @@ void test("settings use one Dock-first hierarchy instead of repeating preset sel
   assert.match(baseSettings, /heading: "Edge trigger"/);
   assert.match(baseSettings, /heading: "Appearance"/);
   assert.match(baseSettings, /heading: "Dock items"/);
+  assert.match(baseSettings, /heading: "Backup & transfer"/);
 });
 
-void test("About is shared metadata at the bottom of every top-level settings tab", () => {
+void test("Dock preset menu is a simple button row with the add button last", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
-  assert.match(source, /aboutFooterDefinitions\(definition\)/);
+  assert.match(source, /dockPresetSwitcherDefinition/);
+  assert.match(source, /for \(const dock of this\.ledgePlugin\.settings\.docks\)/);
+  assert.match(source, /\.setButtonText\(dock\.name\)/);
+  assert.match(source, /button\.buttonEl\.dataset\.dockPresetId = dock\.id/);
+  assert.match(source, /\.setIcon\("plus"\)[\s\S]*\.setTooltip\("Add Dock preset"\)/);
+  assert.doesNotMatch(source, /dockPresetDefinition\(|ledge-dock-preset-body|chevron-down|chevron-right/);
+});
+
+void test("Dock section tabs are full-width and separated below preset management", () => {
+  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);
+  assert.match(source, /dockSectionNavigationDefinition/);
+  assert.match(source, /cls: "ledge-settings-tabs ledge-dock-section-tabs"/);
+  assert.match(source, /marginTop: "var\(--size-4-5\)"/);
+  assert.match(source, /paddingTop: "var\(--size-4-4\)"/);
+  assert.match(source, /borderTop: "1px solid var\(--background-modifier-border\)"/);
+  assert.match(source, /setting\.infoEl\.setCssStyles\(\{ display: "none" \}\)/);
+  assert.match(source, /this\.containerEl\.dataset\.ledgeSettingsTab = this\.activeDockSection/);
+});
+
+void test("About stays at the bottom and uses manifest metadata", () => {
+  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
   assert.match(source, /mutable\.cls = "ledge-settings-about-footer"/);
   assert.match(source, /name: "Version"[\s\S]*this\.ledgePlugin\.manifest\.version/);
   assert.match(source, /name: "Author"[\s\S]*this\.ledgePlugin\.manifest\.author/);
-  assert.doesNotMatch(source, /WorkspaceSettingsTab = [^\n]*about/);
-});
-
-void test("every Dock section is scoped by the open preset and Items is the first task", () => {
-  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
-
-  for (const section of ["layout", "behavior", "visibility", "trigger", "appearance", "items"]) {
-    assert.match(source, new RegExp(`${section}: "ledge-settings-panel-${section}"`));
-  }
-  assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);
-  assert.match(source, /renderedTab = this\.activeWorkspaceTab === "docks"[\s\S]*this\.activeDockSection/);
-  assert.match(source, /The remaining sections control only this dock/);
-});
-
-void test("Dock preset rerenders clear stale bodies and do not use focus highlighting", () => {
-  const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
-
-  assert.match(source, /resetDockPresetRender\(setting\)/);
-  assert.match(source, /classList\.contains\("ledge-dock-preset-body"\)/);
-  assert.match(source, /setting\.controlEl\.replaceChildren\(\)/);
-  assert.doesNotMatch(source, /interactive-accent/);
-  assert.doesNotMatch(source, /is-selected|is-disabled/);
 });
 
 void test("top and bottom docks anchor to the active note content area", () => {
