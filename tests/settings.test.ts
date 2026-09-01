@@ -19,6 +19,8 @@ void test("fresh installs receive usable defaults", () => {
   assert.equal(settings.triggerSurfaceMode, "theme");
   assert.equal(settings.items.length, 9);
   assert.ok(settings.items.every((item) => item.iconSource === "lucide"));
+  assert.ok(settings.items.every((item) => item.builtInIcon === item.icon));
+  assert.ok(settings.items.every((item) => item.vaultIconPath === ""));
   assert.deepEqual(settings.includeRules, []);
   assert.deepEqual(settings.excludeRules, []);
 });
@@ -142,6 +144,40 @@ void test("duplicate item IDs are repaired without losing order", () => {
   });
   assert.deepEqual(settings.items.map((item) => item.id), ["same", "same-2"]);
   assert.deepEqual(settings.items.map((item) => item.label), ["One", "Two"]);
+});
+
+void test("Dock items preserve independent built-in and vault icon values", () => {
+  const settings = normalizeSettings({
+    items: [{
+      id: "contacts",
+      iconSource: "vault",
+      icon: "90_System/contacts.png",
+      builtInIcon: "iconify:tabler:address-book",
+      vaultIconPath: "90_System/contacts.png",
+    }],
+  });
+  const item = settings.items[0];
+
+  assert.equal(item?.iconSource, "vault");
+  assert.equal(item?.icon, "90_System/contacts.png");
+  assert.equal(item?.builtInIcon, "iconify:tabler:address-book");
+  assert.equal(item?.vaultIconPath, "90_System/contacts.png");
+});
+
+void test("legacy source switches recover a vault image path instead of treating it as a built-in ID", () => {
+  const settings = normalizeSettings({
+    items: [{
+      id: "contacts",
+      iconSource: "lucide",
+      icon: "90_System/9_Icons/contacts.png",
+    }],
+  });
+  const item = settings.items[0];
+
+  assert.equal(item?.iconSource, "lucide");
+  assert.equal(item?.icon, "circle");
+  assert.equal(item?.builtInIcon, "circle");
+  assert.equal(item?.vaultIconPath, "90_System/9_Icons/contacts.png");
 });
 
 void test("visibility rules normalize paths, tags, and duplicate IDs", () => {
