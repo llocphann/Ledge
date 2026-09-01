@@ -41,12 +41,17 @@ void test("Dock preset menu is a simple button row with the add button last", ()
   assert.doesNotMatch(source, /dockPresetDefinition\(|ledge-dock-preset-body|chevron-down|chevron-right/);
 });
 
-void test("Dock section tabs are full-width and separated below preset management", () => {
+void test("Dock section tabs are centered without the tabs wrapper box", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
   assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);
   assert.match(source, /dockSectionNavigationDefinition/);
-  assert.match(source, /cls: "ledge-settings-tabs ledge-dock-section-tabs"/);
+  assert.match(source, /cls: "ledge-dock-section-tabs"/);
+  assert.match(source, /tabList\.setCssStyles\(\{ display: "contents" \}\)/);
+  assert.match(source, /justifyContent: "center"/);
+  assert.match(source, /flexWrap: "wrap"/);
+  assert.match(source, /gap: "var\(--size-4-1\)"/);
+  assert.doesNotMatch(source, /cls: "ledge-settings-tabs ledge-dock-section-tabs"/);
   assert.match(source, /marginTop: "var\(--size-4-5\)"/);
   assert.match(source, /paddingTop: "var\(--size-4-4\)"/);
   assert.match(source, /borderTop: "1px solid var\(--background-modifier-border\)"/);
