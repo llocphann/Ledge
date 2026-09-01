@@ -107,6 +107,8 @@ function dockItem(id: string, label: string, target: string, icon: string): Dock
     target,
     iconSource: "lucide",
     icon,
+    builtInIcon: icon,
+    vaultIconPath: "",
     iconRenderMode: "tint",
     iconSize: 0,
     iconColor: "",
@@ -158,13 +160,28 @@ function normalizeItem(value: unknown, index: number, usedIds: Set<string>): Doc
   }
   usedIds.add(id);
 
+  const iconSource = enumValue<IconSource>(source.iconSource, ICON_SOURCES, "lucide");
+  const legacyIcon = stringValue(source.icon, iconSource === "lucide" ? "circle" : "", 500);
+  const builtInIcon = stringValue(
+    source.builtInIcon,
+    iconSource === "lucide" ? legacyIcon : "circle",
+    500,
+  );
+  const vaultIconPath = stringValue(
+    source.vaultIconPath,
+    iconSource === "vault" ? legacyIcon : "",
+    500,
+  );
+
   return {
     id,
     enabled: booleanValue(source.enabled, true),
     label: stringValue(source.label, `Item ${index + 1}`, 120),
     target: stringValue(source.target, "", 500),
-    iconSource: enumValue<IconSource>(source.iconSource, ICON_SOURCES, "lucide"),
-    icon: stringValue(source.icon, "circle", 500),
+    iconSource,
+    icon: iconSource === "vault" ? vaultIconPath : builtInIcon,
+    builtInIcon,
+    vaultIconPath,
     iconRenderMode: enumValue<IconRenderMode>(source.iconRenderMode, ICON_RENDER_MODES, "tint"),
     iconSize: clamp(source.iconSize, 0, 0, 96),
     iconColor: colorValue(source.iconColor),
