@@ -28,7 +28,9 @@ Ledge adds configurable navigation docks to the edges and corners of your Obsidi
 
 ## Configure Ledge
 
-Open **Settings → Community plugins → Ledge**. The **Layout** section shows every Dock as a card instead of hiding presets inside a dropdown. Open a card to edit that Dock's name, enabled state, position, item size, icon size, gap, padding, corner radius, and edge offset. The Dock whose card is open becomes the selected Dock, so the **Behavior**, **Visibility**, **Trigger**, **Appearance**, and **Items** sections edit that same Dock.
+Open **Settings → Community plugins → Ledge**. Every Dock-scoped section — **Layout**, **Behavior**, **Visibility**, **Trigger**, **Appearance**, and **Items** — shows the Dock preset list so it is always clear which Dock you are editing. Choosing another Dock in any of those sections switches the editing context to that preset, and every preset keeps its own settings and Dock items.
+
+In **Layout**, the selected Dock card expands its layout controls directly inside the card: name, enabled state, position, item size, icon size, gap, padding, corner radius, and edge offset. Re-rendering the settings page replaces the existing expanded body instead of appending another copy. Dock cards keep the same neutral appearance whether selected or not; the chevron indicates the current editing context without accent-border or background highlighting.
 
 Use **Add dock** to create another Dock or the copy action on a Dock card to duplicate it. Every preset receives one of the eight available positions. A position already used by another preset is removed from that Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
 
