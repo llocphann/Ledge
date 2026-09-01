@@ -143,6 +143,10 @@ function enumValue<T extends string>(value: unknown, values: readonly T[], fallb
   return typeof value === "string" && values.includes(value as T) ? value as T : fallback;
 }
 
+function looksLikeVaultIconPath(value: string): boolean {
+  return /\.(?:png|jpe?g|webp|gif|svg)$/i.test(value);
+}
+
 function cloneDefaultItems(): DockItemSettings[] {
   return DEFAULT_ITEMS.map((item) => ({ ...item }));
 }
@@ -162,14 +166,18 @@ function normalizeItem(value: unknown, index: number, usedIds: Set<string>): Doc
 
   const iconSource = enumValue<IconSource>(source.iconSource, ICON_SOURCES, "lucide");
   const legacyIcon = stringValue(source.icon, iconSource === "lucide" ? "circle" : "", 500);
+  const legacyVaultPathInBuiltInSource = iconSource === "lucide"
+    && source.builtInIcon === undefined
+    && source.vaultIconPath === undefined
+    && looksLikeVaultIconPath(legacyIcon);
   const builtInIcon = stringValue(
     source.builtInIcon,
-    iconSource === "lucide" ? legacyIcon : "circle",
+    iconSource === "lucide" && !legacyVaultPathInBuiltInSource ? legacyIcon : "circle",
     500,
   );
   const vaultIconPath = stringValue(
     source.vaultIconPath,
-    iconSource === "vault" ? legacyIcon : "",
+    iconSource === "vault" || legacyVaultPathInBuiltInSource ? legacyIcon : "",
     500,
   );
 
