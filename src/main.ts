@@ -1,4 +1,5 @@
 import { Notice, Plugin } from "obsidian";
+import { renameRememberedVaultIconPaths } from "./dock-paths";
 import { ICON_CACHE_DATA_KEY } from "./icon-cache";
 import { LedgeIconLibrarySettingTab } from "./icon-library-setting-tab";
 import {
@@ -34,6 +35,12 @@ export default class LedgePlugin extends Plugin {
     this.settings = normalizeSettings(storedSettings);
     if (shouldPersistMigration) await this.savePersistedData();
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
+
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      if (!renameRememberedVaultIconPaths(this.settings, file.path, oldPath)) return;
+      applyDockPreset(this.settings, this.settings.selectedDockId);
+      void this.saveSettings(false);
+    }));
 
     void this.syncExternalIcons(true);
 
