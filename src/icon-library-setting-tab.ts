@@ -3,6 +3,7 @@ import {
   Setting,
   type App,
   type SettingDefinitionItem,
+  type SettingGroupItem,
 } from "obsidian";
 import { openIconPicker } from "./icon-picker";
 import type LedgePlugin from "./main";
@@ -99,41 +100,42 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   }
 
   private dockPresetListDefinitions(): SettingDefinitionItem {
+    const items: SettingGroupItem<string>[] = [
+      {
+        name: "Dock presets",
+        desc: `Each dock owns one exclusive edge or corner position. Open a dock below to edit its layout (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`,
+        searchable: false,
+        render: (setting) => {
+          setting.settingEl.addClass("ledge-dock-preset-toolbar");
+          setting.addButton((button) => {
+            button
+              .setButtonText("Add dock")
+              .setIcon("plus")
+              .setTooltip("Add dock preset")
+              .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
+              .onClick(() => {
+                void this.ledgePlugin.createDockPreset(false).then((created) => {
+                  if (!created) {
+                    new Notice("All eight dock positions are already in use.");
+                    return;
+                  }
+                  this.update();
+                });
+              });
+          });
+        },
+      },
+      ...this.ledgePlugin.settings.docks.map((dock) => this.dockPresetCardDefinition(dock)),
+    ];
     return {
       type: "group",
       heading: "Docks",
       cls: "ledge-settings-panel-layout",
-      items: [
-        {
-          name: "Dock presets",
-          desc: `Each dock owns one exclusive edge or corner position. Open a dock below to edit its layout (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used).`,
-          searchable: false,
-          render: (setting) => {
-            setting.settingEl.addClass("ledge-dock-preset-toolbar");
-            setting.addButton((button) => {
-              button
-                .setButtonText("Add dock")
-                .setIcon("plus")
-                .setTooltip("Add dock preset")
-                .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
-                .onClick(() => {
-                  void this.ledgePlugin.createDockPreset(false).then((created) => {
-                    if (!created) {
-                      new Notice("All eight dock positions are already in use.");
-                      return;
-                    }
-                    this.update();
-                  });
-                });
-            });
-          },
-        },
-        ...this.ledgePlugin.settings.docks.map((dock) => this.dockPresetCardDefinition(dock)),
-      ],
+      items,
     };
   }
 
-  private dockPresetCardDefinition(dock: DockPresetSettings): SettingDefinitionItem {
+  private dockPresetCardDefinition(dock: DockPresetSettings): SettingGroupItem<string> {
     const selected = dock.id === this.ledgePlugin.settings.selectedDockId;
     return {
       name: dock.name,
