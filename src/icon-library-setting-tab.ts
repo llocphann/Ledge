@@ -174,11 +174,13 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
         if (!selected) return;
         const body = setting.settingEl.createDiv({ cls: "ledge-dock-preset-body" });
-        body.style.flex = "1 0 100%";
-        body.style.width = "100%";
-        body.style.marginTop = "var(--size-4-2)";
-        body.style.paddingTop = "var(--size-4-2)";
-        body.style.borderTop = "1px solid var(--background-modifier-border)";
+        body.setCssStyles({
+          flex: "1 0 100%",
+          width: "100%",
+          marginTop: "var(--size-4-2)",
+          paddingTop: "var(--size-4-2)",
+          borderTop: "1px solid var(--background-modifier-border)",
+        });
         this.renderDockLayoutSettings(body, dock.id, setting);
       },
     };
@@ -189,21 +191,22 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     card.addClass("ledge-dock-preset-card");
     card.classList.toggle("is-selected", selected);
     card.classList.toggle("is-disabled", !enabled);
-    card.style.flexWrap = "wrap";
-    card.style.gap = "var(--size-4-2)";
-    card.style.margin = "var(--size-4-2) 0";
-    card.style.padding = "var(--size-4-3)";
-    card.style.border = selected
-      ? "1px solid var(--interactive-accent)"
-      : "1px solid var(--background-modifier-border)";
-    card.style.borderRadius = "var(--radius-m)";
-    card.style.background = selected
-      ? "color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary))"
-      : "var(--background-secondary)";
-    card.style.opacity = enabled ? "1" : ".72";
-    setting.infoEl.style.flex = "1 1 220px";
-    setting.controlEl.style.flex = "0 0 auto";
-    setting.controlEl.style.flexWrap = "wrap";
+    card.setCssStyles({
+      flexWrap: "wrap",
+      gap: "var(--size-4-2)",
+      margin: "var(--size-4-2) 0",
+      padding: "var(--size-4-3)",
+      border: selected
+        ? "1px solid var(--interactive-accent)"
+        : "1px solid var(--background-modifier-border)",
+      borderRadius: "var(--radius-m)",
+      background: selected
+        ? "color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary))"
+        : "var(--background-secondary)",
+      opacity: enabled ? "1" : ".72",
+    });
+    setting.infoEl.setCssStyles({ flex: "1 1 220px" });
+    setting.controlEl.setCssStyles({ flex: "0 0 auto", flexWrap: "wrap" });
   }
 
   private renderDockLayoutSettings(
@@ -327,7 +330,6 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         slider
           .setLimits(minimum, maximum, step)
           .setValue(numericPreset[key])
-          .setDynamicTooltip()
           .onChange((value) => {
             const current = this.ledgePlugin.getDockPresetRuntime(dockId);
             if (!current) return;
