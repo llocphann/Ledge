@@ -176,10 +176,11 @@ export class DockController extends Component {
         item.target = target;
         changed = true;
       }
-      if (item.iconSource !== "vault") continue;
-      const icon = rename(item.icon);
-      if (icon !== item.icon) {
-        item.icon = icon;
+
+      const rememberedIcon = rename(item.vaultIconPath);
+      if (rememberedIcon !== item.vaultIconPath) {
+        item.vaultIconPath = rememberedIcon;
+        if (item.iconSource === "vault") item.icon = rememberedIcon;
         changed = true;
       }
     }
@@ -528,9 +529,11 @@ class DockInstance extends Component {
     const rootPane = leafContainer?.closest(".workspace-split.mod-root")
       || this.document.querySelector(".workspace-split.mod-root")
       || this.document.querySelector(".workspace");
-    const rect = rootPane?.getBoundingClientRect();
-    if (!rect) return;
+    const rootRect = rootPane?.getBoundingClientRect();
+    if (!rootRect) return;
 
+    const position = settings.position;
+    const rect = this.anchorRectForPosition(position, leaf, leafContainer, rootRect);
     const viewportWidth = this.document.defaultView?.innerWidth
       || this.document.documentElement.clientWidth;
     const viewportHeight = this.document.defaultView?.innerHeight
@@ -538,7 +541,6 @@ class DockInstance extends Component {
     const panelWidth = this.panel.offsetWidth;
     const panelHeight = this.panel.offsetHeight;
     const offset = settings.edgeOffset;
-    const position = settings.position;
     let left = rect.left;
     let top = rect.top;
 
@@ -569,6 +571,22 @@ class DockInstance extends Component {
     this.panel.style.left = `${left}px`;
     this.panel.style.top = `${top}px`;
     this.positionTrigger(rect, position, settings.triggerSize, settings.triggerLength);
+  }
+
+  private anchorRectForPosition(
+    position: DockPosition,
+    leaf: WorkspaceLeaf | null,
+    leafContainer: HTMLElement | undefined,
+    fallbackRect: DOMRect,
+  ): DOMRect {
+    if (position !== "top" && position !== "bottom") return fallbackRect;
+
+    const viewContent = (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
+      ?? leafContainer?.querySelector<HTMLElement>(".view-content")
+      ?? leafContainer;
+    const contentRect = viewContent?.getBoundingClientRect();
+    if (!contentRect || contentRect.width <= 0 || contentRect.height <= 0) return fallbackRect;
+    return contentRect;
   }
 
   private positionTrigger(
