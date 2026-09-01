@@ -22,13 +22,22 @@ void test("Ledge settings export and import round-trip through a versioned envel
   const envelope = JSON.parse(exported) as Record<string, unknown>;
 
   assert.equal(envelope.format, "ledge-settings");
-  assert.equal(envelope.schemaVersion, 1);
+  assert.equal(envelope.schemaVersion, 2);
   assert.equal(envelope.pluginVersion, "9.9.9");
   assert.deepEqual(parseLedgeSettingsImport(exported), settings);
 });
 
-void test("Ledge import accepts raw settings but rejects foreign or future envelopes", () => {
+void test("Ledge import accepts raw and schema-v1 settings but rejects foreign or future envelopes", () => {
   assert.equal(parseLedgeSettingsImport('{"itemSize":999}').itemSize, 84);
+
+  const legacy = parseLedgeSettingsImport(JSON.stringify({
+    format: "ledge-settings",
+    schemaVersion: 1,
+    settings: { position: "right", items: [] },
+  }));
+  assert.equal(legacy.docks.length, 1);
+  assert.equal(legacy.position, "right");
+
   assert.throws(() => parseLedgeSettingsImport("not json"), /valid JSON/);
   assert.throws(() => parseLedgeSettingsImport("{}"), /does not contain Ledge settings/);
   assert.throws(
@@ -36,7 +45,7 @@ void test("Ledge import accepts raw settings but rejects foreign or future envel
     /not exported by Ledge/,
   );
   assert.throws(
-    () => parseLedgeSettingsImport('{"format":"ledge-settings","schemaVersion":2,"settings":{}}'),
+    () => parseLedgeSettingsImport('{"format":"ledge-settings","schemaVersion":3,"settings":{}}'),
     /Unsupported Ledge settings schema/,
   );
 });
