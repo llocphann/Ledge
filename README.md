@@ -60,7 +60,7 @@ The release files are `main.js`, `manifest.json`, and `styles.css`. GitHub relea
 If Ledge is useful to you, you can support its continued development:
 
 <a href="https://www.buymeacoffee.com/llocphann">
-  <img src="assets/buy-me-a-coffee.svg" alt="Buy me a coffee" width="217">
+  <img src="https://raw.githubusercontent.com/llocphann/Ledge/main/assets/buy-me-a-coffee.svg" alt="Buy me a coffee" width="217">
 </a>
 
 ## License
