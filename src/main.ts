@@ -1,6 +1,6 @@
 import { Notice, Plugin } from "obsidian";
 import { DockController } from "./dock";
-import { LedgeSettingTab } from "./settings-tab";
+import { LedgeIconLibrarySettingTab } from "./icon-library-setting-tab";
 import { hasLegacyHotCornerSettings, normalizeSettings } from "./settings";
 import type { LedgeSettings } from "./types";
 
@@ -14,7 +14,7 @@ export default class LedgePlugin extends Plugin {
     const shouldPersistTriggerMigration = hasLegacyHotCornerSettings(storedSettings);
     this.settings = normalizeSettings(storedSettings);
     if (shouldPersistTriggerMigration) await this.saveData(this.settings);
-    this.addSettingTab(new LedgeSettingTab(this.app, this));
+    this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
 
     this.addCommand({
       id: "toggle-dock",
