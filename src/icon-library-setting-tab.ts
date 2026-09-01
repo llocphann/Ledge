@@ -104,6 +104,12 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       // page: Dock presets and their sections, followed by Data and About.
       if (mutable.cls === "ledge-settings-tabs-group") continue;
 
+      if (mutable.cls === "ledge-settings-panel-data") {
+        mutable.cls = "ledge-settings-data-inline";
+        definitions.push(definition);
+        continue;
+      }
+
       if (mutable.cls === "ledge-settings-panel-about") {
         definitions.push(this.aboutFooterDefinitions(definition));
         continue;
@@ -216,6 +222,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         setting.settingEl.addClass("ledge-dock-preset-switcher-setting");
         setting.controlEl.replaceChildren();
         setting.infoEl.setCssStyles({ display: "none" });
+        setting.settingEl.setCssStyles({ display: "block" });
         setting.controlEl.setCssStyles({
           width: "100%",
           justifyContent: "flex-start",
@@ -280,9 +287,9 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
               const latest = this.ledgePlugin.getDockPresetRuntime(dockId);
               if (!latest) return;
               latest.name = value;
-              const selector = this.containerEl.querySelector<HTMLButtonElement>(
-                `[data-dock-preset-id="${CSS.escape(dockId)}"]`,
-              );
+              const selector = Array.from(
+                this.containerEl.querySelectorAll<HTMLButtonElement>("[data-dock-preset-id]"),
+              ).find((candidate) => candidate.dataset.dockPresetId === dockId);
               if (selector) selector.textContent = value.trim() || "Dock";
               void this.ledgePlugin.saveDockPresetRuntime(dockId, false);
             });
@@ -316,6 +323,12 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         setting.settingEl.addClass("ledge-dock-section-nav-setting");
         setting.controlEl.replaceChildren();
         setting.infoEl.setCssStyles({ display: "none" });
+        setting.settingEl.setCssStyles({
+          display: "block",
+          marginTop: "var(--size-4-5)",
+          paddingTop: "var(--size-4-4)",
+          borderTop: "1px solid var(--background-modifier-border)",
+        });
         setting.controlEl.setCssStyles({
           width: "100%",
           justifyContent: "flex-start",
