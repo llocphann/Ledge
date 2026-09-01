@@ -140,9 +140,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       desc: `${POSITION_LABELS[dock.position]} · ${dock.enabled ? "Enabled" : "Hidden"}`,
       searchable: false,
       render: (setting) => {
-        setting.settingEl.addClass("ledge-dock-preset-card");
-        setting.settingEl.classList.toggle("is-selected", selected);
-        setting.settingEl.classList.toggle("is-disabled", !dock.enabled);
+        this.styleDockCard(setting, selected, dock.enabled);
 
         setting.addButton((button) => {
           button
@@ -176,12 +174,43 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
         if (!selected) return;
         const body = setting.settingEl.createDiv({ cls: "ledge-dock-preset-body" });
-        this.renderDockLayoutSettings(body, dock.id);
+        body.style.flex = "1 0 100%";
+        body.style.width = "100%";
+        body.style.marginTop = "var(--size-4-2)";
+        body.style.paddingTop = "var(--size-4-2)";
+        body.style.borderTop = "1px solid var(--background-modifier-border)";
+        this.renderDockLayoutSettings(body, dock.id, setting);
       },
     };
   }
 
-  private renderDockLayoutSettings(container: HTMLElement, dockId: string): void {
+  private styleDockCard(setting: Setting, selected: boolean, enabled: boolean): void {
+    const card = setting.settingEl;
+    card.addClass("ledge-dock-preset-card");
+    card.classList.toggle("is-selected", selected);
+    card.classList.toggle("is-disabled", !enabled);
+    card.style.flexWrap = "wrap";
+    card.style.gap = "var(--size-4-2)";
+    card.style.margin = "var(--size-4-2) 0";
+    card.style.padding = "var(--size-4-3)";
+    card.style.border = selected
+      ? "1px solid var(--interactive-accent)"
+      : "1px solid var(--background-modifier-border)";
+    card.style.borderRadius = "var(--radius-m)";
+    card.style.background = selected
+      ? "color-mix(in srgb, var(--interactive-accent) 8%, var(--background-secondary))"
+      : "var(--background-secondary)";
+    card.style.opacity = enabled ? "1" : ".72";
+    setting.infoEl.style.flex = "1 1 220px";
+    setting.controlEl.style.flex = "0 0 auto";
+    setting.controlEl.style.flexWrap = "wrap";
+  }
+
+  private renderDockLayoutSettings(
+    container: HTMLElement,
+    dockId: string,
+    parentSetting: Setting,
+  ): void {
     const preset = this.ledgePlugin.getDockPresetRuntime(dockId);
     if (!preset) return;
 
@@ -196,6 +225,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
             const current = this.ledgePlugin.getDockPresetRuntime(dockId);
             if (!current) return;
             current.name = value;
+            parentSetting.nameEl.textContent = value.trim() || "Dock";
             void this.ledgePlugin.saveDockPresetRuntime(dockId, false);
           });
       });
