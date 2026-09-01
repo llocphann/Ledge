@@ -1,6 +1,6 @@
 # Ledge
 
-Ledge adds a configurable navigation dock to the edge of your Obsidian workspace. It remains available while you move between notes, Bases, canvases, and Custom Views.
+Ledge adds configurable navigation docks to the edges and corners of your Obsidian workspace. Multiple named Dock presets can remain available at the same time while you move between notes, Bases, canvases, and Custom Views.
 
 <p align="center">
   <img src="assets/left-dock.png" alt="Ledge left dock" width="49%">
@@ -9,11 +9,13 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 
 ## Features
 
-- Left, right, top, and bottom docks.
-- Four 90-degree corner layouts.
+- Up to eight named Dock presets that can render simultaneously.
+- Exclusive placement across left, right, top, bottom, and four 90-degree corner positions.
+- Add, duplicate, rename, select, enable or disable, and delete Dock presets.
+- Each Dock keeps its own layout, behavior, visibility rules, trigger, appearance, and items.
 - Configurable item size, icon size, gap, padding, radius, and edge offset.
 - Theme-aware, solid, and gradient surfaces.
-- Independent controls for the shared dock background and outer border.
+- Independent controls for the shared Dock background and outer border.
 - Adjustable reveal delay, hide delay, trigger size, and motion duration.
 - Optional macOS-style focused and neighboring item magnification.
 - Unified searchable built-in icon picker with Obsidian/Lucide, Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons.
@@ -26,18 +28,26 @@ Ledge adds a configurable navigation dock to the edge of your Obsidian workspace
 
 ## Configure Ledge
 
-Open **Settings → Community plugins → Ledge**, then choose a settings tab.
+Open **Settings → Community plugins → Ledge**. The **Dock preset** selector stays available while you move between settings sections, so the rest of the page always edits the selected Dock.
 
-Every dock item has:
+Use **Add** to create another Dock or **Duplicate** to copy the selected Dock. Every preset receives one of the eight available positions. A position already used by another preset is removed from the selected Dock's **Position** dropdown, including when the other preset is disabled. Deleting a preset releases its position again.
+
+Existing single-Dock configurations are migrated automatically into **Dock 1** without changing their items, position, visibility rules, trigger, or appearance settings.
+
+Every Dock item has:
 
 - a label;
 - a vault-relative target path;
-- either an icon chosen from the unified built-in icon picker, a manually entered Obsidian icon ID, or a vault-relative image path;
+- either an icon chosen from the unified built-in icon picker, a manually entered Obsidian icon ID, or a vault-relative icon path;
 - optional icon size, color, and tile gradient overrides.
 
-Select **Browse icons** to search a grid where each result shows only its icon and readable name. Obsidian/Lucide icons come from the local Obsidian icon registry. Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons are queried from Iconify on demand. Search and first-time selection of those external collections require a network connection, but Ledge stores only the external icons currently used by Dock items in its plugin data. Cached icons are registered again before the Dock starts after a reload, so previously selected icons continue to render offline without shipping thousands of SVG files in `main.js`.
+Select **Browse icons** to search a grid where each result shows only its icon and readable name. Obsidian/Lucide icons come from the local Obsidian icon registry. Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons are queried from Iconify on demand. Search and first-time selection of those external collections require a network connection, but Ledge stores retained external icon choices from every Dock preset in its plugin data. Cached icons are registered again before the Docks start after a reload, so previously selected icons continue to render offline without shipping thousands of SVG files in `main.js`.
 
-For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
+For an icon stored in the vault, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image. Switching between **Built-in icon** and **Icon in vault** preserves the previously selected value for each source.
+
+## Backup and migration
+
+Settings exports use schema v2 so one backup contains every Dock preset. Ledge still accepts schema-v1 backups from the previous single-Dock format and migrates them into one preset during import.
 
 ## Install manually
 
@@ -47,6 +57,8 @@ For a vault image, choose **Tint** to recolor a transparent icon with the active
 4. Enable **Ledge** under **Settings → Community plugins**.
 
 ## Development
+
+Node.js 22 or newer is required for the development toolchain.
 
 ```bash
 npm install
