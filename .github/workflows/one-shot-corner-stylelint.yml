@@ -1,0 +1,42 @@
+name: One-shot corner stylelint fix
+
+on:
+  push:
+    branches: [prerelease]
+    paths:
+      - .github/workflows/one-shot-corner-stylelint.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+      - name: Reorder corner trigger state selectors
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('styles.css')
+          text = path.read_text()
+          state = '''.ledge-dock-trigger:hover::before,\n.ledge-dock-trigger:focus-visible::before,\n.ledge-dock-trigger.is-visible::before,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:hover::after,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:focus-visible::after,\n.ledge-dock-root[data-position*="-"] .ledge-dock-trigger.is-visible::after {\n  filter: brightness(1.14);\n  opacity: 1;\n  box-shadow:\n    inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),\n    0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);\n}\n\n'''
+          anchor = '''.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before,\n.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {\n  right: 0;\n  bottom: 0;\n}\n\n'''
+          if state not in text:
+              raise SystemExit('state block not found')
+          if anchor not in text:
+              raise SystemExit('corner anchor block not found')
+          text = text.replace(state, '', 1)
+          text = text.replace(anchor, anchor + state, 1)
+          path.write_text(text)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add styles.css
+          git commit -m "Order corner trigger state selectors [skip ci]"
+          git push origin HEAD:prerelease
