@@ -1,7 +1,12 @@
 import { Notice, Plugin } from "obsidian";
 import { DockController } from "./dock";
+import { ICON_CACHE_DATA_KEY } from "./icon-cache";
 import { LedgeIconLibrarySettingTab } from "./icon-library-setting-tab";
-import { ensureIconifyIcons } from "./icon-provider";
+import {
+  exportIconifyCache,
+  restoreIconifyCache,
+  syncIconifyCache,
+} from "./icon-provider";
 import { hasLegacyHotCornerSettings, normalizeSettings } from "./settings";
 import type { LedgeSettings } from "./types";
 
@@ -12,18 +17,14 @@ export default class LedgePlugin extends Plugin {
 
   async onload(): Promise<void> {
     const storedSettings: unknown = await this.loadData();
+    restoreIconifyCache(storedSettings);
+
     const shouldPersistTriggerMigration = hasLegacyHotCornerSettings(storedSettings);
     this.settings = normalizeSettings(storedSettings);
-    if (shouldPersistTriggerMigration) await this.saveData(this.settings);
+    if (shouldPersistTriggerMigration) await this.savePersistedData();
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
 
-    void ensureIconifyIcons(
-      this.settings.items
-        .filter((item) => item.iconSource === "lucide")
-        .map((item) => item.icon),
-    ).then(() => {
-      this.controller?.applySettings();
-    });
+    void this.syncExternalIcons(true);
 
     this.addCommand({
       id: "toggle-dock",
@@ -49,7 +50,27 @@ export default class LedgePlugin extends Plugin {
 
   async saveSettings(refresh = true): Promise<void> {
     this.settings = normalizeSettings(this.settings);
-    await this.saveData(this.settings);
+    await syncIconifyCache(this.externalIconIds());
+    await this.savePersistedData();
+    if (refresh) this.controller?.applySettings();
+  }
+
+  private externalIconIds(): string[] {
+    return this.settings.items
+      .filter((item) => item.iconSource === "lucide")
+      .map((item) => item.icon);
+  }
+
+  private async savePersistedData(): Promise<void> {
+    await this.saveData({
+      ...this.settings,
+      [ICON_CACHE_DATA_KEY]: exportIconifyCache(),
+    });
+  }
+
+  private async syncExternalIcons(refresh: boolean): Promise<void> {
+    const changed = await syncIconifyCache(this.externalIconIds());
+    if (changed) await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
   }
 }
