@@ -10,33 +10,43 @@ export class LedgeSettingTabWithIcons extends LedgeSettingTab {
   }
 
   getSettingDefinitions(): SettingDefinitionItem[] {
-    const definitions = super.getSettingDefinitions();
-    const dockItems = definitions.find((definition) =>
-      definition.type === "list" && definition.heading === "Dock items",
-    );
-    if (!dockItems || dockItems.type !== "list") return definitions;
-
-    for (const [index, page] of dockItems.items.entries()) {
-      if (page.type !== "page") continue;
-      const item = this.plugin.settings.items[index];
-      if (!item) continue;
-
-      const iconNameIndex = page.items.findIndex((definition) =>
-        "name" in definition && definition.name === "Icon name",
-      );
-      const insertAt = iconNameIndex >= 0 ? iconNameIndex + 1 : page.items.length;
-      page.items.splice(insertAt, 0, this.iconLibraryDefinition(item));
-    }
-
-    return definitions;
+    return [
+      ...super.getSettingDefinitions(),
+      {
+        type: "group",
+        heading: "Icon library",
+        cls: "ledge-settings-panel-items",
+        items: this.plugin.settings.items.map((item, index) =>
+          this.iconLibraryDefinition(item, index),
+        ),
+      },
+    ];
   }
 
-  private iconLibraryDefinition(item: DockItemSettings): SettingDefinitionItem {
+  private iconLibraryDefinition(
+    item: DockItemSettings,
+    index: number,
+  ): SettingDefinitionItem {
+    const itemName = item.label || item.target || `Item ${index + 1}`;
     return {
-      name: "Icon library",
-      desc: "Browse and search the Lucide icons included with your current Obsidian version.",
-      visible: () => item.iconSource === "lucide",
+      name: itemName,
+      desc: item.iconSource === "lucide"
+        ? `Current icon: ${item.icon || "circle"}`
+        : "Switch this item to the built-in Lucide source to choose an icon here.",
       render: (setting) => {
+        if (item.iconSource !== "lucide") {
+          setting.addButton((button) =>
+            button
+              .setButtonText("Use built-in icons")
+              .onClick(() => {
+                item.iconSource = "lucide";
+                if (!item.icon) item.icon = "circle";
+                void this.plugin.saveSettings().then(() => this.update());
+              }),
+          );
+          return;
+        }
+
         const preview = setting.controlEl.createSpan({
           cls: "clickable-icon",
           attr: {
