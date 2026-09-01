@@ -35,7 +35,7 @@ Every dock item has:
 - either an icon chosen from the unified built-in icon picker, a manually entered Obsidian icon ID, or a vault-relative image path;
 - optional icon size, color, and tile gradient overrides.
 
-Select **Browse icons** to search a grid where each result shows only its icon and readable name. Obsidian/Lucide icons come from the local Obsidian icon registry. Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons are queried from Iconify on demand and registered into the current Obsidian session, which keeps the Ledge plugin bundle small instead of shipping thousands of SVG files.
+Select **Browse icons** to search a grid where each result shows only its icon and readable name. Obsidian/Lucide icons come from the local Obsidian icon registry. Tabler Icons, Material Design Icons, Phosphor, and Bootstrap Icons are queried from Iconify on demand. Search and first-time selection of those external collections require a network connection, but Ledge stores only the external icons currently used by Dock items in its plugin data. Cached icons are registered again before the Dock starts after a reload, so previously selected icons continue to render offline without shipping thousands of SVG files in `main.js`.
 
 For a vault image, choose **Tint** to recolor a transparent icon with the active accent or **Original colors** to preserve the source image.
 
