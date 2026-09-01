@@ -116,11 +116,11 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
               button
                 .setButtonText("Add")
                 .setIcon("plus")
-                .setTooltip("Add Dock preset")
+                .setTooltip("Add dock preset")
                 .onClick(() => {
                   void this.ledgePlugin.createDockPreset(false).then((created) => {
                     if (!created) {
-                      new Notice("All eight Dock positions are already in use.");
+                      new Notice("All eight dock positions are already in use.");
                       return;
                     }
                     this.update();
@@ -132,11 +132,11 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
               button
                 .setButtonText("Duplicate")
                 .setIcon("copy")
-                .setTooltip("Duplicate selected Dock preset")
+                .setTooltip("Duplicate selected dock preset")
                 .onClick(() => {
                   void this.ledgePlugin.createDockPreset(true).then((created) => {
                     if (!created) {
-                      new Notice("All eight Dock positions are already in use.");
+                      new Notice("All eight dock positions are already in use.");
                       return;
                     }
                     this.update();
@@ -148,7 +148,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
               button
                 .setButtonText("Delete")
                 .setIcon("trash-2")
-                .setTooltip("Delete selected Dock preset")
+                .setTooltip("Delete selected dock preset")
                 .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
                 .setDestructive()
                 .onClick(() => {
