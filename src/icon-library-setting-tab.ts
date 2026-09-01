@@ -1,7 +1,6 @@
 import {
   Notice,
   Setting,
-  setIcon,
   type App,
   type SettingDefinitionItem,
   type SettingGroupItem,
@@ -10,7 +9,7 @@ import { openIconPicker } from "./icon-picker";
 import type LedgePlugin from "./main";
 import { availableDockPositions, MAX_DOCK_PRESETS } from "./settings";
 import { LedgeSettingTab } from "./settings-tab";
-import type { DockPosition, DockPresetSettings } from "./types";
+import type { DockPosition } from "./types";
 
 const POSITION_LABELS: Record<DockPosition, string> = {
   left: "Left",
@@ -30,8 +29,6 @@ type DockSettingsSection =
   | "visibility"
   | "trigger"
   | "appearance";
-
-type WorkspaceSettingsTab = "docks" | "data";
 
 const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
   "items",
@@ -60,15 +57,6 @@ const SECTION_CLASSES: Record<DockSettingsSection, string> = {
   items: "ledge-settings-panel-items",
 };
 
-const WORKSPACE_TABS: Array<{
-  id: WorkspaceSettingsTab;
-  label: string;
-  icon: string;
-}> = [
-  { id: "docks", label: "Docks", icon: "panels-top-left" },
-  { id: "data", label: "Data", icon: "database-backup" },
-];
-
 type MutableSettingDefinition = {
   name?: string;
   desc?: string;
@@ -92,7 +80,6 @@ type MutableSettingDefinition = {
  * so every section below edits that preset without duplicating controls.
  */
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
-  private activeWorkspaceTab: WorkspaceSettingsTab = "docks";
   private activeDockSection: DockSettingsSection = "items";
 
   constructor(
@@ -108,12 +95,15 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     const definitions: SettingDefinitionItem[] = [];
     let dockWorkspaceInserted = false;
 
+    this.containerEl.classList.add("ledge-settings-root");
+    this.applyDockSectionVisibility();
+
     for (const definition of baseDefinitions) {
       const mutable = definition as unknown as MutableSettingDefinition;
-      if (mutable.cls === "ledge-settings-tabs-group") {
-        definitions.push(this.workspaceNavigationDefinitions());
-        continue;
-      }
+      // The base tab row is intentionally omitted. Ledge now has one settings
+      // page: Dock presets and their sections, followed by Data and About.
+      if (mutable.cls === "ledge-settings-tabs-group") continue;
+
       if (mutable.cls === "ledge-settings-panel-about") {
         definitions.push(this.aboutFooterDefinitions(definition));
         continue;
@@ -164,88 +154,8 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     await super.setControlValue(key, value);
   }
 
-  private workspaceNavigationDefinitions(): SettingDefinitionItem {
-    return {
-      type: "group",
-      cls: "ledge-settings-tabs-group",
-      items: [
-        {
-          name: "Settings sections",
-          searchable: false,
-          render: (setting) => {
-            this.containerEl.classList.add("ledge-settings-root");
-            setting.settingEl.classList.add("ledge-settings-tabs-setting");
-
-            const tabList = setting.controlEl.createDiv({ cls: "ledge-settings-tabs" });
-            tabList.setAttribute("role", "tablist");
-            tabList.setAttribute("aria-label", "Ledge settings sections");
-            const buttons: HTMLButtonElement[] = [];
-            const cleanups: Array<() => void> = [];
-
-            const activate = (tabId: WorkspaceSettingsTab, focus = false): void => {
-              this.activeWorkspaceTab = tabId;
-              this.applyWorkspaceVisibility();
-              for (const candidate of buttons) {
-                const selected = candidate.dataset.tabId === tabId;
-                candidate.setAttribute("aria-selected", String(selected));
-                candidate.tabIndex = selected ? 0 : -1;
-                if (selected && focus) candidate.focus();
-              }
-            };
-
-            for (const tab of WORKSPACE_TABS) {
-              const button = tabList.createEl("button", {
-                cls: "ledge-settings-tab",
-                attr: {
-                  type: "button",
-                  role: "tab",
-                  "data-tab-id": tab.id,
-                  "aria-selected": "false",
-                },
-              });
-              const icon = button.createSpan({ cls: "ledge-settings-tab-icon" });
-              setIcon(icon, tab.icon);
-              button.createSpan({ text: tab.label });
-              const onClick = (): void => activate(tab.id);
-              button.addEventListener("click", onClick);
-              cleanups.push(() => button.removeEventListener("click", onClick));
-              buttons.push(button);
-            }
-
-            const onKeyDown = (event: KeyboardEvent): void => {
-              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-              const activeElement = this.containerEl.ownerDocument.activeElement;
-              const currentIndex = Math.max(0, buttons.findIndex((button) => button === activeElement));
-              let nextIndex = currentIndex;
-              if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-              if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % buttons.length;
-              if (event.key === "Home") nextIndex = 0;
-              if (event.key === "End") nextIndex = buttons.length - 1;
-              const next = WORKSPACE_TABS[nextIndex];
-              if (!next) return;
-              event.preventDefault();
-              activate(next.id, true);
-            };
-            tabList.addEventListener("keydown", onKeyDown);
-            cleanups.push(() => tabList.removeEventListener("keydown", onKeyDown));
-            activate(this.activeWorkspaceTab);
-            return () => cleanups.forEach((cleanup) => cleanup());
-          },
-        },
-      ],
-    };
-  }
-
-  private applyWorkspaceVisibility(): void {
-    const renderedTab = this.activeWorkspaceTab === "docks"
-      ? this.activeDockSection
-      : this.activeWorkspaceTab;
-    this.containerEl.dataset.ledgeSettingsTab = renderedTab;
-    const workspaces = Array.from(this.containerEl.querySelectorAll(".ledge-dock-workspace"));
-    for (const workspace of workspaces) {
-      if (!(workspace instanceof HTMLElement)) continue;
-      workspace.hidden = this.activeWorkspaceTab !== "docks";
-    }
+  private applyDockSectionVisibility(): void {
+    this.containerEl.dataset.ledgeSettingsTab = this.activeDockSection;
   }
 
   private aboutFooterDefinitions(definition: SettingDefinitionItem): SettingDefinitionItem {
@@ -284,32 +194,9 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
   private dockWorkspaceDefinitions(): SettingDefinitionItem {
     const items: SettingGroupItem<string>[] = [
-      {
-        name: "Dock presets",
-        desc: `Choose a Dock, then edit its Items, Layout, Behavior, Visibility, Trigger, or Appearance (${this.ledgePlugin.settings.docks.length}/${MAX_DOCK_PRESETS} used). Every setting in these sections belongs only to the open Dock.`,
-        searchable: false,
-        render: (setting) => {
-          setting.settingEl.addClass("ledge-dock-preset-toolbar");
-          this.applyWorkspaceVisibility();
-          setting.addButton((button) => {
-            button
-              .setButtonText("Add dock")
-              .setIcon("plus")
-              .setTooltip("Add dock preset")
-              .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
-              .onClick(() => {
-                void this.ledgePlugin.createDockPreset(false).then((created) => {
-                  if (!created) {
-                    new Notice("All eight dock positions are already in use.");
-                    return;
-                  }
-                  this.update();
-                });
-              });
-          });
-        },
-      },
-      ...this.ledgePlugin.settings.docks.map((dock) => this.dockPresetDefinition(dock)),
+      this.dockPresetSwitcherDefinition(),
+      this.selectedPresetManagementDefinition(),
+      this.dockSectionNavigationDefinition(),
     ];
 
     return {
@@ -320,151 +207,171 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     };
   }
 
-  private dockPresetDefinition(dock: DockPresetSettings): SettingGroupItem<string> {
-    const selected = dock.id === this.ledgePlugin.settings.selectedDockId;
+  private dockPresetSwitcherDefinition(): SettingGroupItem<string> {
     return {
-      name: dock.name,
-      desc: `${POSITION_LABELS[dock.position]} · ${dock.enabled ? "Enabled" : "Hidden"}`,
+      name: "Dock presets",
+      desc: "Choose a preset. Use + to create the next Dock preset.",
       searchable: false,
       render: (setting) => {
-        this.resetDockPresetRender(setting);
-        this.styleDockPresetRow(setting);
+        setting.settingEl.addClass("ledge-dock-preset-switcher-setting");
+        setting.controlEl.replaceChildren();
+        setting.infoEl.setCssStyles({ display: "none" });
+        setting.controlEl.setCssStyles({
+          width: "100%",
+          justifyContent: "flex-start",
+          flexWrap: "wrap",
+          gap: "var(--size-4-1)",
+        });
+        this.applyDockSectionVisibility();
+
+        for (const dock of this.ledgePlugin.settings.docks) {
+          const selected = dock.id === this.ledgePlugin.settings.selectedDockId;
+          setting.addButton((button) => {
+            button
+              .setButtonText(dock.name)
+              .setTooltip(`${POSITION_LABELS[dock.position]} · ${dock.enabled ? "Enabled" : "Hidden"}`)
+              .onClick(() => {
+                void this.ledgePlugin.selectDockPreset(dock.id).then((changed) => {
+                  if (changed) this.update();
+                });
+              });
+            button.buttonEl.dataset.dockPresetId = dock.id;
+            button.buttonEl.setAttribute("aria-pressed", String(selected));
+          });
+        }
 
         setting.addButton((button) => {
           button
-            .setIcon(selected ? "chevron-down" : "chevron-right")
-            .setTooltip(selected ? "Dock settings are open" : "Open Dock settings")
-            .setDisabled(selected)
+            .setIcon("plus")
+            .setTooltip("Add Dock preset")
+            .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
             .onClick(() => {
-              void this.ledgePlugin.selectDockPreset(dock.id).then((changed) => {
-                if (changed) this.update();
+              void this.ledgePlugin.createDockPreset(false).then((created) => {
+                if (!created) {
+                  new Notice("All eight dock positions are already in use.");
+                  return;
+                }
+                this.update();
               });
+            });
+        });
+      },
+    };
+  }
+
+  private selectedPresetManagementDefinition(): SettingGroupItem<string> {
+    const dockId = this.ledgePlugin.settings.selectedDockId;
+    const preset = this.ledgePlugin.getDockPresetRuntime(dockId);
+    return {
+      name: "Preset name",
+      desc: preset
+        ? `${POSITION_LABELS[preset.position]} · ${preset.enabled ? "Enabled" : "Hidden"}`
+        : "Rename the selected Dock preset.",
+      searchable: false,
+      render: (setting) => {
+        const current = this.ledgePlugin.getDockPresetRuntime(dockId);
+        if (!current) return;
+
+        setting.addText((text) => {
+          text
+            .setPlaceholder("Dock 1")
+            .setValue(current.name)
+            .onChange((value) => {
+              const latest = this.ledgePlugin.getDockPresetRuntime(dockId);
+              if (!latest) return;
+              latest.name = value;
+              const selector = this.containerEl.querySelector<HTMLButtonElement>(
+                `[data-dock-preset-id="${CSS.escape(dockId)}"]`,
+              );
+              if (selector) selector.textContent = value.trim() || "Dock";
+              void this.ledgePlugin.saveDockPresetRuntime(dockId, false);
             });
         });
 
         setting.addButton((button) => {
           button
             .setIcon("copy")
-            .setTooltip("Duplicate dock")
+            .setTooltip("Duplicate Dock")
             .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
-            .onClick(() => this.duplicateDock(dock.id));
+            .onClick(() => this.duplicateDock(dockId));
         });
 
         setting.addButton((button) => {
           button
             .setIcon("trash-2")
-            .setTooltip("Delete dock")
+            .setTooltip("Delete Dock")
             .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
             .setDestructive()
-            .onClick(() => this.deleteDock(dock.id));
+            .onClick(() => this.deleteDock(dockId));
         });
-
-        if (!selected) return;
-        const body = setting.settingEl.createDiv({ cls: "ledge-dock-preset-body" });
-        body.setCssStyles({
-          flex: "1 0 100%",
-          width: "100%",
-          paddingTop: "var(--size-4-2)",
-        });
-        this.renderPresetIdentity(body, dock.id, setting);
-        this.renderDockSectionNavigation(body);
       },
     };
   }
 
-  private resetDockPresetRender(setting: Setting): void {
-    setting.controlEl.replaceChildren();
-    for (const child of Array.from(setting.settingEl.children)) {
-      if (child.classList.contains("ledge-dock-preset-body")) child.remove();
-    }
-  }
+  private dockSectionNavigationDefinition(): SettingGroupItem<string> {
+    return {
+      name: "Dock settings",
+      searchable: false,
+      render: (setting) => {
+        setting.settingEl.addClass("ledge-dock-section-nav-setting");
+        setting.controlEl.replaceChildren();
+        setting.infoEl.setCssStyles({ display: "none" });
+        setting.controlEl.setCssStyles({
+          width: "100%",
+          justifyContent: "flex-start",
+        });
 
-  private styleDockPresetRow(setting: Setting): void {
-    setting.settingEl.addClass("ledge-dock-preset-card");
-    setting.settingEl.setCssStyles({
-      flexWrap: "wrap",
-      gap: "var(--size-4-2)",
-    });
-    setting.infoEl.setCssStyles({ flex: "1 1 220px" });
-    setting.controlEl.setCssStyles({ flex: "0 0 auto", flexWrap: "wrap" });
-  }
+        const tabList = setting.controlEl.createDiv({
+          cls: "ledge-settings-tabs ledge-dock-section-tabs",
+        });
+        tabList.setAttribute("role", "tablist");
+        tabList.setAttribute("aria-label", "Dock settings sections");
+        const buttons: HTMLButtonElement[] = [];
 
-  private renderPresetIdentity(
-    container: HTMLElement,
-    dockId: string,
-    parentSetting: Setting,
-  ): void {
-    const preset = this.ledgePlugin.getDockPresetRuntime(dockId);
-    if (!preset) return;
+        const activate = (section: DockSettingsSection, focus = false): void => {
+          this.activeDockSection = section;
+          this.applyDockSectionVisibility();
+          for (const candidate of buttons) {
+            const selected = candidate.dataset.dockSection === section;
+            candidate.setAttribute("aria-selected", String(selected));
+            candidate.tabIndex = selected ? 0 : -1;
+            if (selected && focus) candidate.focus();
+          }
+        };
 
-    new Setting(container)
-      .setName("Preset name")
-      .setDesc("Name used to identify this preset throughout the plugin.")
-      .addText((text) => {
-        text
-          .setPlaceholder("Dock 1")
-          .setValue(preset.name)
-          .onChange((value) => {
-            const current = this.ledgePlugin.getDockPresetRuntime(dockId);
-            if (!current) return;
-            current.name = value;
-            parentSetting.nameEl.textContent = value.trim() || "Dock";
-            void this.ledgePlugin.saveDockPresetRuntime(dockId, false);
+        for (const section of DOCK_SETTINGS_SECTIONS) {
+          const button = tabList.createEl("button", {
+            cls: "ledge-settings-tab",
+            attr: {
+              type: "button",
+              role: "tab",
+              "data-dock-section": section,
+              "aria-selected": "false",
+            },
           });
-      });
-  }
+          button.createSpan({ text: SECTION_LABELS[section] });
+          button.addEventListener("click", () => activate(section));
+          buttons.push(button);
+        }
 
-  private renderDockSectionNavigation(container: HTMLElement): void {
-    const navSetting = new Setting(container)
-      .setName("Dock settings")
-      .setDesc("Items are the shortcuts in this dock. The remaining sections control only this dock.");
-    const tabList = navSetting.controlEl.createDiv({ cls: "ledge-settings-tabs" });
-    tabList.setAttribute("role", "tablist");
-    tabList.setAttribute("aria-label", "Dock settings sections");
-    const buttons: HTMLButtonElement[] = [];
+        tabList.addEventListener("keydown", (event) => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          const activeElement = this.containerEl.ownerDocument.activeElement;
+          const currentIndex = Math.max(0, buttons.findIndex((button) => button === activeElement));
+          let nextIndex = currentIndex;
+          if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+          if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % buttons.length;
+          if (event.key === "Home") nextIndex = 0;
+          if (event.key === "End") nextIndex = buttons.length - 1;
+          const next = DOCK_SETTINGS_SECTIONS[nextIndex];
+          if (!next) return;
+          event.preventDefault();
+          activate(next, true);
+        });
 
-    const activate = (section: DockSettingsSection, focus = false): void => {
-      this.activeDockSection = section;
-      this.applyWorkspaceVisibility();
-      for (const candidate of buttons) {
-        const selected = candidate.dataset.dockSection === section;
-        candidate.setAttribute("aria-selected", String(selected));
-        candidate.tabIndex = selected ? 0 : -1;
-        if (selected && focus) candidate.focus();
-      }
+        activate(this.activeDockSection);
+      },
     };
-
-    for (const section of DOCK_SETTINGS_SECTIONS) {
-      const button = tabList.createEl("button", {
-        cls: "ledge-settings-tab",
-        attr: {
-          type: "button",
-          role: "tab",
-          "data-dock-section": section,
-          "aria-selected": "false",
-        },
-      });
-      button.createSpan({ text: SECTION_LABELS[section] });
-      button.addEventListener("click", () => activate(section));
-      buttons.push(button);
-    }
-
-    tabList.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      const activeElement = container.ownerDocument.activeElement;
-      const currentIndex = Math.max(0, buttons.findIndex((button) => button === activeElement));
-      let nextIndex = currentIndex;
-      if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-      if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % buttons.length;
-      if (event.key === "Home") nextIndex = 0;
-      if (event.key === "End") nextIndex = buttons.length - 1;
-      const next = DOCK_SETTINGS_SECTIONS[nextIndex];
-      if (!next) return;
-      event.preventDefault();
-      activate(next, true);
-    });
-
-    activate(this.activeDockSection);
   }
 
   private duplicateDock(dockId: string): void {
