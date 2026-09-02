@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check:
@@ -19,3 +19,39 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  publish_2_1_0:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prerelease' && contains(github.event.head_commit.message, '[publish-2.1.0]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+          fetch-depth: 0
+      - name: Tag validated main commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_sha='b37ac86cf0a9bb93660656c58874458ca32a234f'
+          git fetch origin main --tags
+          test "$(git rev-parse origin/main)" = "$release_sha"
+          test "$(git show "$release_sha":manifest.json | node -e 'let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>process.exit(JSON.parse(s).version==="2.1.0"?0:1))')" = ""
+          if git show-ref --verify --quiet refs/tags/2.1.0; then
+            echo 'Tag 2.1.0 already exists'
+            exit 1
+          fi
+          git tag 2.1.0 "$release_sha"
+          git push origin refs/tags/2.1.0
+      - name: Restore standard prerelease CI
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin prerelease
+          git reset --hard origin/prerelease
+          git show HEAD^:.github/workflows/ci.yml > .github/workflows/ci.yml
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add .github/workflows/ci.yml
+          git commit -m "Restore standard CI after 2.1.0 publish"
+          git push origin prerelease
