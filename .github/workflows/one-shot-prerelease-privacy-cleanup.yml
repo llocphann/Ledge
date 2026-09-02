@@ -1,0 +1,102 @@
+name: One-shot prerelease privacy cleanup
+
+on:
+  push:
+    branches:
+      - prerelease
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Remove vault-specific release defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          settings_path = Path("src/settings.ts")
+          settings = settings_path.read_text()
+          settings, count = re.subn(
+              r'const DEFAULT_ITEMS: DockItemSettings\[\] = \[.*?\n\];',
+              'const DEFAULT_ITEMS: DockItemSettings[] = [];',
+              settings,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit("DEFAULT_ITEMS block not found exactly once")
+          settings_path.write_text(settings)
+
+          settings_tab_path = Path("src/settings-tab.ts")
+          settings_tab = settings_tab_path.read_text()
+          old_placeholder = '"20_Personal_Life/25_Media_Tracker"'
+          if old_placeholder not in settings_tab:
+              raise SystemExit("vault-specific folder placeholder not found")
+          settings_tab_path.write_text(settings_tab.replace(old_placeholder, '"Projects/Notes"', 1))
+
+          test_path = Path("tests/settings.test.ts")
+          tests = test_path.read_text()
+          old_test = '''  assert.equal(settings.items.length, 9);\n  assert.ok(settings.items.every((item) => item.iconSource === "lucide"));\n  assert.ok(settings.items.every((item) => item.builtInIcon === item.icon));\n  assert.ok(settings.items.every((item) => item.vaultIconPath === ""));'''
+          if old_test not in tests:
+              raise SystemExit("fresh-install item assertions not found")
+          test_path.write_text(tests.replace(old_test, '  assert.deepEqual(settings.items, []);', 1))
+
+          changelog_path = Path("CHANGELOG.md")
+          changelog = changelog_path.read_text()
+          marker = "## Unreleased\n\n"
+          note = "- Remove vault-specific default item paths and the remaining personal folder placeholder from the distributed build; fresh installs now start with an empty Dock item list.\n"
+          if note not in changelog:
+              if marker not in changelog:
+                  raise SystemExit("Unreleased changelog section not found")
+              changelog = changelog.replace(marker, marker + note, 1)
+          changelog_path.write_text(changelog)
+          PY
+      - name: Build bundle before privacy audit
+        run: npm run build
+      - name: Audit release bundle for local or vault-specific paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='Finance_Dashboard|Contact_Tracker|Instructional_Documents|Bodybuilding\.base|Media_Tracker|Book_Tracker|FoodnDrinks|20_Personal_Life|10_Projects|Obsidian-Vault|/home/|/Users/|C:\\Users\\'
+          if grep -REn "$forbidden" src main.js manifest.json styles.css; then
+            echo "Forbidden local/vault-specific path data found in release inputs"
+            exit 1
+          fi
+      - name: Validate prerelease
+        run: npm run check
+      - name: Commit privacy cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add src/settings.ts src/settings-tab.ts tests/settings.test.ts CHANGELOG.md main.js
+          git commit -m "Remove vault-specific release defaults"
+          git push origin prerelease
+      - name: Remove temporary workflow
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin prerelease
+          git reset --hard origin/prerelease
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git rm -f .github/workflows/one-shot-prerelease-privacy-cleanup.yml
+          git commit -m "Remove temporary privacy audit workflow"
+          git push origin prerelease
