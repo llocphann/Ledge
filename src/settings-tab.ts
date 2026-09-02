@@ -1,8 +1,11 @@
 import {
+  AbstractInputSuggest,
   App,
   Notice,
   PluginSettingTab,
+  Setting,
   normalizePath,
+  prepareSimpleSearch,
   setIcon,
   type SettingDefinitionItem,
   type SettingDefinitionPage,
@@ -35,6 +38,44 @@ const POSITION_LABELS: Record<DockPosition, string> = {
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif", "svg"]);
 const FUNDING_URL = "https://www.buymeacoffee.com/llocphann";
 const MAX_IMPORT_BYTES = 1024 * 1024;
+const TARGET_SUGGESTION_LIMIT = 50;
+const PRIMARY_TARGET_EXTENSIONS = new Set(["md", "base", "canvas"]);
+
+function isTargetSuggestion(file: TFile): boolean {
+  if (!PRIMARY_TARGET_EXTENSIONS.has(file.extension.toLowerCase())) return false;
+  return !file.path.split("/").some((segment) => segment === ".git" || segment === "node_modules");
+}
+
+class DockTargetSuggest extends AbstractInputSuggest<TFile> {
+  private readonly files: TFile[];
+
+  constructor(app: App, inputEl: HTMLInputElement) {
+    super(app, inputEl);
+    this.limit = TARGET_SUGGESTION_LIMIT;
+    this.files = app.vault.getFiles();
+  }
+
+  protected getSuggestions(query: string): TFile[] {
+    const normalized = query.trim();
+    const search = normalized ? prepareSimpleSearch(normalized) : null;
+    const suggestions: TFile[] = [];
+    for (const file of this.files) {
+      if (!isTargetSuggestion(file)) continue;
+      if (search && !search(file.path)) continue;
+      suggestions.push(file);
+      if (suggestions.length >= TARGET_SUGGESTION_LIMIT) break;
+    }
+    return suggestions;
+  }
+
+  renderSuggestion(file: TFile, el: HTMLElement): void {
+    el.createDiv({ text: file.name });
+    if (file.path !== file.name) {
+      el.createDiv({ cls: "ledge-target-suggestion-path", text: file.path });
+    }
+  }
+}
+
 const SETTINGS_TABS = [
   { id: "layout", label: "Layout", icon: "layout-dashboard" },
   { id: "behavior", label: "Behavior", icon: "timer" },
@@ -927,7 +968,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           name: "Target path",
           desc: "Vault-relative path to a note, base file, canvas, or another file.",
-          control: { type: "file", key: key("target"), placeholder: "Folder/Note.md" },
+          render: (setting) => this.renderTargetPathControl(setting, key("target")),
         },
         {
           name: "Icon source",
@@ -1018,6 +1059,52 @@ export class LedgeSettingTab extends PluginSettingTab {
           },
         },
       ],
+    };
+  }
+
+  private renderTargetPathControl(setting: Setting, key: string): () => void {
+    const storedValue = this.getControlValue(key);
+    const initialValue = typeof storedValue === "string" ? storedValue : "";
+    let pendingValue = initialValue;
+    let committedValue = initialValue;
+    let suggester: DockTargetSuggest | null = null;
+    let inputEl: HTMLInputElement | null = null;
+
+    const commit = (): void => {
+      if (pendingValue === committedValue) return;
+      committedValue = pendingValue;
+      void this.setControlValue(key, pendingValue);
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Enter") commit();
+    };
+
+    setting.controlEl.addClass("ledge-target-path-control");
+    setting.addSearch((search) => {
+      search
+        .setPlaceholder("Folder/Note.md")
+        .setValue(initialValue)
+        .onChange((value) => {
+          pendingValue = value;
+        });
+      search.inputEl.setAttribute("aria-label", "Target path");
+      inputEl = search.inputEl;
+      inputEl.addEventListener("blur", commit);
+      inputEl.addEventListener("keydown", onKeyDown);
+
+      suggester = new DockTargetSuggest(this.app, inputEl);
+      suggester.onSelect((file) => {
+        pendingValue = file.path;
+        committedValue = file.path;
+        search.setValue(file.path);
+        void this.setControlValue(key, file.path);
+      });
+    });
+
+    return () => {
+      suggester?.close();
+      inputEl?.removeEventListener("blur", commit);
+      inputEl?.removeEventListener("keydown", onKeyDown);
     };
   }
 

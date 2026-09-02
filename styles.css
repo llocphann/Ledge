@@ -713,6 +713,15 @@
   width: min(320px, 46vw);
 }
 
+.ledge-target-path-control .search-input-container {
+  width: min(320px, 46vw);
+}
+
+.ledge-target-suggestion-path {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
 .ledge-settings-root:not([data-ledge-settings-tab="layout"]) .ledge-settings-panel-layout,
 .ledge-settings-root:not([data-ledge-settings-tab="behavior"]) .ledge-settings-panel-behavior,
 .ledge-settings-root:not([data-ledge-settings-tab="visibility"]) .ledge-settings-panel-visibility,

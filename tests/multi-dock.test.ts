@@ -181,3 +181,16 @@ void test("multi-dock runtime reuses the complete single-dock controller", () =>
   assert.match(source, /controller\.applySettings\(\)/);
   assert.doesNotMatch(source, /setInterval\(|MutationObserver/);
 });
+
+void test("Dock item Target path uses a bounded lazy suggester instead of the default file control", () => {
+  const source = fs.readFileSync("src/settings-tab.ts", "utf8");
+
+  assert.match(source, /class DockTargetSuggest extends AbstractInputSuggest<TFile>/);
+  assert.match(source, /const TARGET_SUGGESTION_LIMIT = 50/);
+  assert.match(source, /PRIMARY_TARGET_EXTENSIONS = new Set\(\["md", "base", "canvas"\]\)/);
+  assert.match(source, /segment === "\.git" \|\| segment === "node_modules"/);
+  assert.match(source, /name: "Target path"[\s\S]*render: \(setting\) => this\.renderTargetPathControl/);
+  assert.doesNotMatch(source, /name: "Target path"[\s\S]{0,220}type: "file"/);
+  assert.match(source, /suggester\.onSelect\(\(file\) =>/);
+});
+
