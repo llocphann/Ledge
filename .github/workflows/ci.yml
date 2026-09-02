@@ -6,7 +6,9 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   check:
@@ -19,3 +21,72 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  publish_2_1_0_assets:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prerelease' && contains(github.event.head_commit.message, '[release-assets-2.1.0]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2.1.0
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate tagged release
+        run: npm run check
+      - name: Verify release metadata and privacy
+        shell: bash
+        run: |
+          set -euo pipefail
+          node -e "const manifest=require('./manifest.json'); const pkg=require('./package.json'); if(manifest.version!=='2.1.0'||pkg.version!=='2.1.0') process.exit(1)"
+          forbidden='Finance_Dashboard|Contact_Tracker|Instructional_Documents|Bodybuilding\.base|Media_Tracker|Book_Tracker|FoodnDrinks|20_Personal_Life|10_Projects|Obsidian-Vault|/home/|/Users/|C:\\Users\\'
+          if grep -REn "$forbidden" src main.js manifest.json styles.css; then
+            echo "Forbidden local/vault-specific path data found"
+            exit 1
+          fi
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: 2.1.0
+          name: Ledge 2.1.0
+          prerelease: false
+          draft: false
+          fail_on_unmatched_files: true
+          body: |
+            ## What's changed
+
+            - Add reliable drag-and-drop reordering for Dock items in Settings using pointer-captured dragging, with visible move-up and move-down controls.
+            - Fix item descriptions becoming `[object DocumentFragment]` after reordering.
+            - Fix external Iconify icons rendering too small in the picker and Dock, including migration of existing cached icons.
+            - Keep Dock item and visibility-rule titles synchronized after committed edits.
+            - Use bounded lazy vault-file suggesters for Target path, exact visibility paths, and vault image icons; Target path search can discover other file types when searching.
+            - Reduce unnecessary Settings rebuild and external icon-cache work during unrelated edits.
+            - Disambiguate duplicate Dock item page names without changing their actual labels.
+            - Remove vault-specific default file paths and personal folder placeholders from distributed release assets. Fresh installs now start with an empty Dock item list; existing saved configurations are preserved.
+          files: |
+            main.js
+            manifest.json
+            styles.css
+      - name: Restore standard prerelease CI
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin prerelease
+          git checkout -B prerelease origin/prerelease
+          git show HEAD^:.github/workflows/ci.yml > .github/workflows/ci.yml
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add .github/workflows/ci.yml
+          git commit -m "Restore standard CI after 2.1.0 release"
+          git push origin prerelease
