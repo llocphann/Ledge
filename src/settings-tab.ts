@@ -437,7 +437,7 @@ export class LedgeSettingTab extends PluginSettingTab {
             rule.matchType === "note"
               ? "Homepage"
               : rule.matchType === "folder"
-                ? "20_Personal_Life/25_Media_Tracker"
+                ? "Projects/Notes"
                 : "#media/movies",
             "Visibility rule value",
             true,

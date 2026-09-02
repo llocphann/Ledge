@@ -34,17 +34,7 @@ type SettingsInput = Partial<LedgeSettings> & LegacyHotCornerSettings;
 
 export const MAX_DOCK_PRESETS = DOCK_POSITIONS.length;
 
-const DEFAULT_ITEMS: DockItemSettings[] = [
-  dockItem("finance", "Finance", "Finance_Dashboard.md", "landmark"),
-  dockItem("contacts", "Contacts", "Contact_Tracker.base", "contact"),
-  dockItem("documents", "Documents", "Instructional_Documents.base", "notebook-tabs"),
-  dockItem("training", "Training", "Bodybuilding.base", "dumbbell"),
-  dockItem("media", "Media", "Media_Tracker.base", "clapperboard"),
-  dockItem("games", "Games", "Games.base", "gamepad-2"),
-  dockItem("books", "Books", "Book_Tracker.base", "library"),
-  dockItem("fashion", "Fashion", "Fashion.base", "shirt"),
-  dockItem("food", "Food & drinks", "FoodnDrinks.base", "utensils"),
-];
+const DEFAULT_ITEMS: DockItemSettings[] = [];
 
 const DEFAULT_DOCK: DockSettings = {
   enabled: true,
