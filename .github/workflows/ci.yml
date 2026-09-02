@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check:
@@ -19,3 +19,55 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  prepare_2_1_0:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prerelease' && contains(github.event.head_commit.message, '[prepare-2.1.0]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Bump version and promote changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm version 2.1.0 --no-git-tag-version
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("CHANGELOG.md")
+          text = p.read_text()
+          marker = "## Unreleased\n\n"
+          replacement = "## Unreleased\n\n## 2.1.0\n\n"
+          if "## 2.1.0\n" not in text:
+              if marker not in text:
+                  raise SystemExit("Unreleased section not found")
+              text = text.replace(marker, replacement, 1)
+          p.write_text(text)
+          PY
+      - name: Validate release candidate
+        run: npm run check
+      - name: Audit release inputs for private paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='Finance_Dashboard|Contact_Tracker|Instructional_Documents|Bodybuilding\.base|Media_Tracker|Book_Tracker|FoodnDrinks|20_Personal_Life|10_Projects|Obsidian-Vault|/home/|/Users/|C:\\Users\\'
+          if grep -REn "$forbidden" src main.js manifest.json styles.css; then
+            echo "Forbidden local/vault-specific path data found"
+            exit 1
+          fi
+      - name: Commit clean release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show HEAD^:.github/workflows/ci.yml > .github/workflows/ci.yml
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add CHANGELOG.md manifest.json package.json package-lock.json versions.json main.js .github/workflows/ci.yml
+          git commit -m "Prepare Ledge 2.1.0"
+          git push origin prerelease
