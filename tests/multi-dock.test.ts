@@ -182,15 +182,70 @@ void test("multi-dock runtime reuses the complete single-dock controller", () =>
   assert.doesNotMatch(source, /setInterval\(|MutationObserver/);
 });
 
-void test("Dock item Target path uses a bounded lazy suggester instead of the default file control", () => {
+void test("vault path controls use a bounded lazy suggester instead of eager file controls", () => {
   const source = fs.readFileSync("src/settings-tab.ts", "utf8");
 
-  assert.match(source, /class DockTargetSuggest extends AbstractInputSuggest<TFile>/);
+  assert.match(source, /class BoundedVaultFileSuggest extends AbstractInputSuggest<TFile>/);
   assert.match(source, /const TARGET_SUGGESTION_LIMIT = 50/);
   assert.match(source, /PRIMARY_TARGET_EXTENSIONS = new Set\(\["md", "base", "canvas"\]\)/);
   assert.match(source, /segment === "\.git" \|\| segment === "node_modules"/);
-  assert.match(source, /name: "Target path"[\s\S]*render: \(setting\) => this\.renderTargetPathControl/);
-  assert.doesNotMatch(source, /name: "Target path"[\s\S]{0,220}type: "file"/);
+  assert.match(source, /mode: "target" \| "all" \| "image"/);
+  assert.match(source, /searchableFiles = mode === "target"[\s\S]*preferredTargets[\s\S]*secondaryTargets/);
+  assert.match(source, /name: "Target path"[\s\S]*renderFilePathControl/);
+  assert.match(source, /name: "Exact file path"[\s\S]*renderFilePathControl/);
+  assert.match(source, /name: "Icon path"[\s\S]*renderFilePathControl/);
+  assert.doesNotMatch(source, /control:\s*\{\s*type: "file"/);
   assert.match(source, /suggester\.onSelect\(\(file\) =>/);
 });
 
+void test("prerelease item settings expose pointer-captured drag and arrow reorder controls", () => {
+  const base = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const main = fs.readFileSync("src/main.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
+
+  assert.match(base, /onReorder: \(oldIndex, newIndex\) =>/);
+  assert.match(enhanced, /private itemRowDecoratorDefinition\(\): SettingDefinitionItem/);
+  assert.match(enhanced, /render: \(\) => \{[\s\S]*this\.scheduleItemRowControls\(\)/);
+  assert.doesNotMatch(enhanced, /override display\(\)/);
+  assert.match(enhanced, /private itemRows\(\): Array<\{ itemId: string; row: HTMLElement \}>/);
+  assert.match(enhanced, /"aria-label": "Drag to reorder dock item"/);
+  assert.match(enhanced, /setIcon\(dragButton, "grip-vertical"\)/);
+  assert.match(enhanced, /addEventListener\("pointerdown"/);
+  assert.match(enhanced, /addEventListener\("pointermove"/);
+  assert.match(enhanced, /addEventListener\("pointerup"/);
+  assert.match(enhanced, /setPointerCapture\(event\.pointerId\)/);
+  assert.match(enhanced, /elementFromPoint\(event\.clientX, event\.clientY\)/);
+  assert.match(enhanced, /private reorderDockItem\(sourceId: string, targetId: string, dropAfter: boolean\)/);
+  assert.doesNotMatch(enhanced, /dragstart|dragover|dropEffect|dataTransfer|draggable = true/);
+  assert.match(enhanced, /"aria-label": "Move dock item up"/);
+  assert.match(enhanced, /"aria-label": "Move dock item down"/);
+  assert.match(styles, /\.ledge-item-row-decorator/);
+  assert.match(styles, /\.ledge-item-drag-handle \{[\s\S]*touch-action: none;/);
+  assert.match(main, /async saveSettings\(refresh = true, syncIcons = false\)/);
+});
+
+
+void test("item and visibility page identities refresh only after committed text edits", () => {
+  const source = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(source, /name: "Label"[\s\S]*renderCommittedTextControl[\s\S]*"Dock item label"[\s\S]*true/);
+  assert.match(source, /"Visibility rule value"[\s\S]*true/);
+  assert.match(source, /if \(event\.key === "Enter"\) commit\(\)/);
+  assert.match(source, /inputEl\.addEventListener\("blur", commit\)/);
+  assert.match(enhanced, /item\.iconSource !== "vault"/);
+  assert.doesNotMatch(enhanced, /\.onChange\(\(value\) => \{\s*void this\.setControlValue\(key, value\)/);
+});
+
+
+void test("item row descriptions stay plain text across reorder refreshes", () => {
+  const base = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(base, /private itemRowDescription\(item: DockItemSettings\): string/);
+  assert.match(base, /return item\.target \|\| "No target path"/);
+  assert.doesNotMatch(base, /ledge-item-row-marker|createDocumentFragment\(\)/);
+  assert.match(enhanced, /row\.dataset\.ledgeItemId = item\.id/);
+  assert.match(enhanced, /const itemId = row\.dataset\.ledgeItemId/);
+});

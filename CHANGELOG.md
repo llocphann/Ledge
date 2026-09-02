@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 2.1.0
+
+- Remove vault-specific default item paths and the remaining personal folder placeholder from the distributed build; fresh installs now start with an empty Dock item list.
+- Fix Dock item row descriptions turning into `[object DocumentFragment]` after drag or arrow reordering by keeping descriptions as plain text and storing row identity in DOM data attributes.
+- Fix Dock item Settings reorder initialization with a declarative render hook, and replace unreliable HTML5 drag/drop with pointer-captured dragging while retaining visible move-up / move-down buttons.
+- Fix external Iconify previews and Dock icons rendering too small by normalizing their SVG bodies to Obsidian's custom-icon coordinate space and migrating the existing icon cache.
+- Keep Dock item and visibility-rule titles synchronized after committed label/path/value edits without saving every keystroke.
+- Replace the remaining eager vault file controls with bounded suggesters for visibility paths and vault-image icons; Target path search can now discover other file types when a query is entered.
+
+- Reduce settings work after item reordering by avoiding a full settings rebuild after native drag operations.
+- Prefilter Target path candidates once when its suggester opens, keeping subsequent searches bounded to relevant Markdown, Base, and Canvas files.
+- Avoid external icon-cache synchronization for unrelated settings changes while still syncing when icon data or imported settings change.
+- Disambiguate duplicate Dock item page names in settings without changing the actual Dock labels.
+
 ## 2.0.1
 
 - Fix a freeze when opening or editing a Dock item's Target path in large vaults by replacing the eager vault-wide file control with a bounded lazy suggester.

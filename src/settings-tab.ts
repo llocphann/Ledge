@@ -41,26 +41,31 @@ const MAX_IMPORT_BYTES = 1024 * 1024;
 const TARGET_SUGGESTION_LIMIT = 50;
 const PRIMARY_TARGET_EXTENSIONS = new Set(["md", "base", "canvas"]);
 
-function isTargetSuggestion(file: TFile): boolean {
-  if (!PRIMARY_TARGET_EXTENSIONS.has(file.extension.toLowerCase())) return false;
+function isUserVaultFile(file: TFile): boolean {
   return !file.path.split("/").some((segment) => segment === ".git" || segment === "node_modules");
 }
 
-class DockTargetSuggest extends AbstractInputSuggest<TFile> {
-  private readonly files: TFile[];
+function isPrimaryTargetFile(file: TFile): boolean {
+  return PRIMARY_TARGET_EXTENSIONS.has(file.extension.toLowerCase());
+}
 
-  constructor(app: App, inputEl: HTMLInputElement) {
+class BoundedVaultFileSuggest extends AbstractInputSuggest<TFile> {
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    private readonly initialFiles: TFile[],
+    private readonly searchableFiles: TFile[] = initialFiles,
+  ) {
     super(app, inputEl);
     this.limit = TARGET_SUGGESTION_LIMIT;
-    this.files = app.vault.getFiles();
   }
 
   protected getSuggestions(query: string): TFile[] {
     const normalized = query.trim();
     const search = normalized ? prepareSimpleSearch(normalized) : null;
     const suggestions: TFile[] = [];
-    for (const file of this.files) {
-      if (!isTargetSuggestion(file)) continue;
+    const files = normalized ? this.searchableFiles : this.initialFiles;
+    for (const file of files) {
       if (search && !search(file.path)) continue;
       suggestions.push(file);
       if (suggestions.length >= TARGET_SUGGESTION_LIMIT) break;
@@ -410,11 +415,9 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           name: "Exact file path",
           desc: "Choose one file in the vault.",
-          control: {
-            type: "file",
-            key: key("matchValue"),
-            placeholder: "Folder/Note.md",
-          },
+          render: (setting) => this.renderFilePathControl(
+            setting, key("matchValue"), "all", "Folder/Note.md", "Exact file path", true,
+          ),
           visible: () => rule.matchType === "path",
         },
         {
@@ -428,15 +431,17 @@ export class LedgeSettingTab extends PluginSettingTab {
             : rule.matchType === "folder"
               ? "Use a vault-relative folder path."
               : "A leading # is optional.",
-          control: {
-            type: "text",
-            key: key("matchValue"),
-            placeholder: rule.matchType === "note"
+          render: (setting) => this.renderCommittedTextControl(
+            setting,
+            key("matchValue"),
+            rule.matchType === "note"
               ? "Homepage"
               : rule.matchType === "folder"
-                ? "20_Personal_Life/25_Media_Tracker"
+                ? "Projects/Notes"
                 : "#media/movies",
-          },
+            "Visibility rule value",
+            true,
+          ),
           visible: () => rule.matchType !== "path",
         },
       ],
@@ -856,7 +861,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         const [item] = this.ledge.settings.items.splice(oldIndex, 1);
         if (!item) return;
         this.ledge.settings.items.splice(newIndex, 0, item);
-        void this.ledge.saveSettings().then(() => this.update());
+        void this.ledge.saveSettings();
       },
       onDelete: (index) => {
         const item = this.ledge.settings.items[index];
@@ -952,8 +957,8 @@ export class LedgeSettingTab extends PluginSettingTab {
     const key = (field: string): string => `item:${item.id}:${field}`;
     return {
       type: "page",
-      name: item.label || item.target || `Item ${index + 1}`,
-      desc: item.target || "No target path",
+      name: this.itemPageName(item, index),
+      desc: this.itemRowDescription(item),
       displayValue: () => item.enabled ? "Enabled" : "Hidden",
       status: () => this.targetExists(item.target) ? null : "warning",
       items: [
@@ -963,12 +968,16 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Label",
-          control: { type: "text", key: key("label"), placeholder: "Books" },
+          render: (setting) => this.renderCommittedTextControl(
+            setting, key("label"), "Books", "Dock item label", true,
+          ),
         },
         {
           name: "Target path",
           desc: "Vault-relative path to a note, base file, canvas, or another file.",
-          render: (setting) => this.renderTargetPathControl(setting, key("target")),
+          render: (setting) => this.renderFilePathControl(
+            setting, key("target"), "target", "Folder/Note.md", "Target path", true,
+          ),
         },
         {
           name: "Icon source",
@@ -990,12 +999,9 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           name: "Icon path",
           desc: "Choose a PNG, JPEG, WebP, GIF, or SVG file stored in the vault.",
-          control: {
-            type: "file",
-            key: key("icon"),
-            placeholder: "Assets/icon.png",
-            filter: (file: TFile) => IMAGE_EXTENSIONS.has(file.extension.toLowerCase()),
-          },
+          render: (setting) => this.renderFilePathControl(
+            setting, key("icon"), "image", "Assets/icon.png", "Icon path",
+          ),
           visible: () => item.iconSource === "vault",
         },
         {
@@ -1062,42 +1068,125 @@ export class LedgeSettingTab extends PluginSettingTab {
     };
   }
 
-  private renderTargetPathControl(setting: Setting, key: string): () => void {
+  private itemPageName(item: DockItemSettings, index: number): string {
+    const base = item.label || item.target || `Item ${index + 1}`;
+    let occurrence = 1;
+    for (let candidateIndex = 0; candidateIndex < index; candidateIndex += 1) {
+      const candidate = this.ledge.settings.items[candidateIndex];
+      if (!candidate) continue;
+      const candidateBase = candidate.label || candidate.target || `Item ${candidateIndex + 1}`;
+      if (candidateBase === base) occurrence += 1;
+    }
+    return occurrence === 1 ? base : `${base} (${occurrence})`;
+  }
+
+  private itemRowDescription(item: DockItemSettings): string {
+    return item.target || "No target path";
+  }
+
+  private renderCommittedTextControl(
+    setting: Setting,
+    key: string,
+    placeholder: string,
+    ariaLabel: string,
+    refreshAfterCommit = false,
+  ): () => void {
     const storedValue = this.getControlValue(key);
     const initialValue = typeof storedValue === "string" ? storedValue : "";
     let pendingValue = initialValue;
     let committedValue = initialValue;
-    let suggester: DockTargetSuggest | null = null;
     let inputEl: HTMLInputElement | null = null;
 
+    const persist = (value: string): void => {
+      void this.setControlValue(key, value).then(() => {
+        if (refreshAfterCommit) this.update();
+      });
+    };
     const commit = (): void => {
       if (pendingValue === committedValue) return;
       committedValue = pendingValue;
-      void this.setControlValue(key, pendingValue);
+      persist(pendingValue);
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Enter") commit();
     };
 
+    setting.addText((text) => {
+      text
+        .setPlaceholder(placeholder)
+        .setValue(initialValue)
+        .onChange((value) => { pendingValue = value; });
+      inputEl = text.inputEl;
+      inputEl.setAttribute("aria-label", ariaLabel);
+      inputEl.addEventListener("blur", commit);
+      inputEl.addEventListener("keydown", onKeyDown);
+    });
+
+    return () => {
+      inputEl?.removeEventListener("blur", commit);
+      inputEl?.removeEventListener("keydown", onKeyDown);
+    };
+  }
+
+  private renderFilePathControl(
+    setting: Setting,
+    key: string,
+    mode: "target" | "all" | "image",
+    placeholder: string,
+    ariaLabel: string,
+    refreshAfterCommit = false,
+  ): () => void {
+    const storedValue = this.getControlValue(key);
+    const initialValue = typeof storedValue === "string" ? storedValue : "";
+    let pendingValue = initialValue;
+    let committedValue = initialValue;
+    let suggester: BoundedVaultFileSuggest | null = null;
+    let inputEl: HTMLInputElement | null = null;
+
+    const persist = (value: string): void => {
+      void this.setControlValue(key, value).then(() => {
+        if (refreshAfterCommit) this.update();
+      });
+    };
+    const commit = (): void => {
+      if (pendingValue === committedValue) return;
+      committedValue = pendingValue;
+      persist(pendingValue);
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Enter") commit();
+    };
+
+    const userFiles = this.app.vault.getFiles().filter(isUserVaultFile);
+    const imageFiles = userFiles.filter((file) => IMAGE_EXTENSIONS.has(file.extension.toLowerCase()));
+    const preferredTargets = userFiles.filter(isPrimaryTargetFile);
+    const secondaryTargets = userFiles.filter((file) => !isPrimaryTargetFile(file));
+    const initialFiles = mode === "image"
+      ? imageFiles
+      : mode === "target"
+        ? preferredTargets
+        : userFiles;
+    const searchableFiles = mode === "target"
+      ? [...preferredTargets, ...secondaryTargets]
+      : initialFiles;
+
     setting.controlEl.addClass("ledge-target-path-control");
     setting.addSearch((search) => {
       search
-        .setPlaceholder("Folder/Note.md")
+        .setPlaceholder(placeholder)
         .setValue(initialValue)
-        .onChange((value) => {
-          pendingValue = value;
-        });
-      search.inputEl.setAttribute("aria-label", "Target path");
+        .onChange((value) => { pendingValue = value; });
       inputEl = search.inputEl;
+      inputEl.setAttribute("aria-label", ariaLabel);
       inputEl.addEventListener("blur", commit);
       inputEl.addEventListener("keydown", onKeyDown);
 
-      suggester = new DockTargetSuggest(this.app, inputEl);
+      suggester = new BoundedVaultFileSuggest(this.app, inputEl, initialFiles, searchableFiles);
       suggester.onSelect((file) => {
         pendingValue = file.path;
         committedValue = file.path;
         search.setValue(file.path);
-        void this.setControlValue(key, file.path);
+        persist(file.path);
       });
     });
 
@@ -1292,7 +1381,7 @@ export class LedgeSettingTab extends PluginSettingTab {
     }
     try {
       this.ledge.settings = parseLedgeSettingsImport(await file.text());
-      await this.ledge.saveSettings();
+      await this.ledge.saveSettings(true, true);
       this.update();
       new Notice("Ledge settings imported.");
     } catch (error) {

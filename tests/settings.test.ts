@@ -22,10 +22,7 @@ void test("fresh installs receive usable defaults", () => {
   assert.equal(settings.triggerAreaSurfaceMode, "theme");
   assert.equal(settings.triggerSurfaceThickness, 5);
   assert.equal(settings.triggerSurfaceMode, "theme");
-  assert.equal(settings.items.length, 9);
-  assert.ok(settings.items.every((item) => item.iconSource === "lucide"));
-  assert.ok(settings.items.every((item) => item.builtInIcon === item.icon));
-  assert.ok(settings.items.every((item) => item.vaultIconPath === ""));
+  assert.deepEqual(settings.items, []);
   assert.deepEqual(settings.includeRules, []);
   assert.deepEqual(settings.excludeRules, []);
   assert.equal(settings.docks.length, 1);

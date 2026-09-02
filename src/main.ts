@@ -67,10 +67,10 @@ export default class LedgePlugin extends Plugin {
     this.controller = null;
   }
 
-  async saveSettings(refresh = true): Promise<void> {
+  async saveSettings(refresh = true, syncIcons = false): Promise<void> {
     syncSelectedDockPreset(this.settings);
     this.settings = normalizeSettings(this.settings);
-    await syncIconifyCache(this.externalIconIds());
+    if (syncIcons) await syncIconifyCache(this.externalIconIds());
     await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
   }
@@ -84,7 +84,6 @@ export default class LedgePlugin extends Plugin {
       applyDockPreset(this.settings, dockId);
     }
     this.settings = normalizeSettings(this.settings);
-    await syncIconifyCache(this.externalIconIds());
     await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
   }
