@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix Dock item row descriptions turning into `[object DocumentFragment]` after drag or arrow reordering by keeping descriptions as plain text and storing row identity in DOM data attributes.
 - Fix Dock item Settings reorder initialization with a declarative render hook, and replace unreliable HTML5 drag/drop with pointer-captured dragging while retaining visible move-up / move-down buttons.
 - Fix external Iconify previews and Dock icons rendering too small by normalizing their SVG bodies to Obsidian's custom-icon coordinate space and migrating the existing icon cache.
 - Keep Dock item and visibility-rule titles synchronized after committed label/path/value edits without saving every keystroke.

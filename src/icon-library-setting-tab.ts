@@ -463,28 +463,28 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
   private itemRows(): Array<{ itemId: string; row: HTMLElement }> {
     const resolved = new Map<string, HTMLElement>();
-    const markers = Array.from(this.containerEl.querySelectorAll<HTMLElement>(
-      ".ledge-item-row-marker[data-ledge-item-id]",
-    ));
-    for (const marker of markers) {
-      const itemId = marker.dataset.ledgeItemId;
-      const row = marker.closest<HTMLElement>(".setting-item");
-      if (itemId && row) resolved.set(itemId, row);
+    const items = this.ledgePlugin.settings.items;
+    const panel = this.containerEl.querySelector<HTMLElement>(".ledge-settings-panel-items");
+    const candidates = panel
+      ? Array.from(panel.querySelectorAll<HTMLElement>(".setting-item"))
+      : [];
+
+    for (const row of candidates) {
+      const itemId = row.dataset.ledgeItemId;
+      if (itemId && items.some((item) => item.id === itemId)) resolved.set(itemId, row);
     }
 
-    const items = this.ledgePlugin.settings.items;
     if (resolved.size < items.length) {
-      const panel = this.containerEl.querySelector<HTMLElement>(".ledge-settings-panel-items");
-      const candidates = panel
-        ? Array.from(panel.querySelectorAll<HTMLElement>(".setting-item"))
-        : [];
       for (const [index, item] of items.entries()) {
         if (resolved.has(item.id)) continue;
         const expectedName = this.itemRowName(item.id, index);
         const row = candidates.find((candidate) =>
-          candidate.querySelector<HTMLElement>(".setting-item-name")?.textContent?.trim() === expectedName,
+          !candidate.dataset.ledgeItemId
+          && candidate.querySelector<HTMLElement>(".setting-item-name")?.textContent?.trim() === expectedName,
         );
-        if (row) resolved.set(item.id, row);
+        if (!row) continue;
+        row.dataset.ledgeItemId = item.id;
+        resolved.set(item.id, row);
       }
     }
 

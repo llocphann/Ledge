@@ -237,3 +237,15 @@ void test("item and visibility page identities refresh only after committed text
   assert.match(enhanced, /item\.iconSource !== "vault"/);
   assert.doesNotMatch(enhanced, /\.onChange\(\(value\) => \{\s*void this\.setControlValue\(key, value\)/);
 });
+
+
+void test("item row descriptions stay plain text across reorder refreshes", () => {
+  const base = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(base, /private itemRowDescription\(item: DockItemSettings\): string/);
+  assert.match(base, /return item\.target \|\| "No target path"/);
+  assert.doesNotMatch(base, /ledge-item-row-marker|createDocumentFragment\(\)/);
+  assert.match(enhanced, /row\.dataset\.ledgeItemId = item\.id/);
+  assert.match(enhanced, /const itemId = row\.dataset\.ledgeItemId/);
+});

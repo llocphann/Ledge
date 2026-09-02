@@ -1080,15 +1080,8 @@ export class LedgeSettingTab extends PluginSettingTab {
     return occurrence === 1 ? base : `${base} (${occurrence})`;
   }
 
-  private itemRowDescription(item: DockItemSettings): DocumentFragment {
-    const doc = this.containerEl.ownerDocument;
-    const fragment = doc.createDocumentFragment();
-    fragment.append(item.target || "No target path");
-    const marker = doc.createElement("span");
-    marker.className = "ledge-item-row-marker";
-    marker.dataset.ledgeItemId = item.id;
-    fragment.append(marker);
-    return fragment;
+  private itemRowDescription(item: DockItemSettings): string {
+    return item.target || "No target path";
   }
 
   private renderCommittedTextControl(
