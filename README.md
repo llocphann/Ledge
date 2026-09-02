@@ -48,9 +48,7 @@ Reload Obsidian and enable **Ledge** under **Community plugins**.
 
 ## Documentation
 
-Detailed setup and feature guides are available in the [Ledge Wiki](https://github.com/llocphann/Ledge/wiki).
-
-The Wiki covers Dock presets and positions, items and icons, visibility rules, auto-hide and trigger behavior, appearance, backup/restore, and troubleshooting.
+See the [Ledge User Guide](docs/README.md) for detailed instructions on Dock presets and positions, items and icons, visibility rules, auto-hide and triggers, appearance, backup/restore, and troubleshooting.
 
 ## Support
 
