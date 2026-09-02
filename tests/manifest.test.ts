@@ -69,16 +69,13 @@ void test("edge trigger replaces the removed hot-corner interface", () => {
   assert.match(settingsTab, /"Activation area background style"/);
 });
 
-void test("user documentation covers multi-Dock and visibility behavior", () => {
+void test("release README points users to the published Wiki", () => {
   const settingsTab = fs.readFileSync("src/settings-tab.ts", "utf8");
   const dock = fs.readFileSync("src/dock.ts", "utf8");
   const multiDock = fs.readFileSync("src/multi-dock.ts", "utf8");
   const settings = fs.readFileSync("src/settings.ts", "utf8");
   const roadmap = fs.readFileSync("ROADMAP.md", "utf8");
   const readme = fs.readFileSync("README.md", "utf8");
-  const guide = fs.readFileSync("docs/README.md", "utf8");
-  const docksGuide = fs.readFileSync("docs/Docks-and-Positions.md", "utf8");
-  const visibilityGuide = fs.readFileSync("docs/Visibility-Rules.md", "utf8");
 
   assert.match(settingsTab, /heading: "Context visibility"/);
   assert.match(settingsTab, /heading: include \? "Show Dock in" : "Hide Dock in"/);
@@ -89,14 +86,8 @@ void test("user documentation covers multi-Dock and visibility behavior", () => 
   assert.match(roadmap, /Current foundation/);
   assert.match(roadmap, /Exclusive placement/);
   assert.match(roadmap, /Context routing extensions/);
-  assert.match(readme, /Ledge User Guide/);
-  assert.match(guide, /Docks and Positions/);
-  assert.match(guide, /Visibility Rules/);
-  assert.match(docksGuide, /up to eight Dock presets/);
-  assert.match(docksGuide, /Disabled Docks still reserve their position/);
-  assert.match(visibilityGuide, /Exclude always wins/);
-  assert.match(visibilityGuide, /Folder path/);
-  assert.match(visibilityGuide, /Tag/);
+  assert.match(readme, /https:\/\/github\.com\/llocphann\/Ledge\/wiki/);
+  assert.doesNotMatch(readme, /## Development|npm install|npm run check/);
 });
 
 void test("Dock item pages expose a visible delete control and runtime work is event driven", () => {
