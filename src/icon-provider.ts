@@ -10,6 +10,7 @@ import {
   type IconifyPrefix,
 } from "./icon-catalog";
 import { parseIconCache, serializeIconCache, type IconCacheData } from "./icon-cache";
+import { iconBodyForObsidian } from "./icon-normalize";
 
 interface IconifyIconData {
   body: string;
@@ -28,23 +29,12 @@ interface IconifySearchResponse {
 }
 
 const ICONIFY_API = "https://api.iconify.design";
-const OBSIDIAN_ICON_SIZE = 24;
 const FETCH_CHUNK_SIZE = 20;
 const registeredIconBodies = new Map<string, string>();
 const cachedIconBodies = new Map<string, string>();
 
 function isSupportedPrefix(value: string): value is IconifyPrefix {
   return ICONIFY_COLLECTIONS.some((collection) => collection.prefix === value);
-}
-
-function iconBody(data: IconifyIconData, defaults: IconifyIconResponse): string {
-  const width = data.width ?? defaults.width ?? OBSIDIAN_ICON_SIZE;
-  const height = data.height ?? defaults.height ?? OBSIDIAN_ICON_SIZE;
-  if (width === OBSIDIAN_ICON_SIZE && height === OBSIDIAN_ICON_SIZE) return data.body;
-
-  const scaleX = OBSIDIAN_ICON_SIZE / width;
-  const scaleY = OBSIDIAN_ICON_SIZE / height;
-  return `<g transform="scale(${scaleX} ${scaleY})">${data.body}</g>`;
 }
 
 function registerIconBody(iconId: string, body: string): void {
@@ -56,7 +46,7 @@ function registerResponse(prefix: IconifyPrefix, response: IconifyIconResponse):
   if (!response.icons) return;
   for (const [name, data] of Object.entries(response.icons)) {
     const iconId = makeIconifyId(prefix, name);
-    registerIconBody(iconId, iconBody(data, response));
+    registerIconBody(iconId, iconBodyForObsidian(data, response));
   }
 }
 

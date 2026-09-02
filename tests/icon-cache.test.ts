@@ -36,6 +36,20 @@ void test("icon cache ignores unrelated, malformed, and unsafe entries", () => {
   assert.deepEqual([...restored.keys()], ["iconify:mdi:safe"]);
 });
 
+void test("legacy v1 icon cache is migrated from 24x24 to Obsidian's 100x100 icon space", () => {
+  const restored = parseIconCache({
+    [ICON_CACHE_DATA_KEY]: {
+      version: 1,
+      icons: { "iconify:mdi:home": "<path d=\"M0 0h24v24H0z\"/>" },
+    },
+  });
+
+  assert.equal(
+    restored.get("iconify:mdi:home"),
+    '<g transform="scale(4.166666666666667)"><path d="M0 0h24v24H0z"/></g>',
+  );
+});
+
 void test("unknown cache versions are ignored safely", () => {
   assert.deepEqual(
     [...parseIconCache({

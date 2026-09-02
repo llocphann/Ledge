@@ -1,7 +1,9 @@
 import { parseIconifyId } from "./icon-catalog";
 
 export const ICON_CACHE_DATA_KEY = "__iconCache";
-export const ICON_CACHE_VERSION = 1;
+export const ICON_CACHE_VERSION = 2;
+const LEGACY_ICON_CACHE_VERSION = 1;
+const LEGACY_ICON_SCALE = 100 / 24;
 
 const MAX_CACHED_ICONS = 256;
 const MAX_ICON_BODY_LENGTH = 24_000;
@@ -25,15 +27,20 @@ function isSafeIconBody(body: string): boolean {
 export function parseIconCache(pluginData: unknown): Map<string, string> {
   if (!isRecord(pluginData)) return new Map();
   const rawCache = pluginData[ICON_CACHE_DATA_KEY];
-  if (!isRecord(rawCache) || rawCache.version !== ICON_CACHE_VERSION || !isRecord(rawCache.icons)) {
-    return new Map();
-  }
+  if (!isRecord(rawCache) || !isRecord(rawCache.icons)) return new Map();
+  const version = rawCache.version;
+  if (version !== ICON_CACHE_VERSION && version !== LEGACY_ICON_CACHE_VERSION) return new Map();
 
   const result = new Map<string, string>();
   for (const [iconId, body] of Object.entries(rawCache.icons)) {
     if (result.size >= MAX_CACHED_ICONS) break;
     if (!parseIconifyId(iconId) || typeof body !== "string" || !isSafeIconBody(body)) continue;
-    result.set(iconId, body);
+    result.set(
+      iconId,
+      version === LEGACY_ICON_CACHE_VERSION
+        ? `<g transform="scale(${LEGACY_ICON_SCALE})">${body}</g>`
+        : body,
+    );
   }
   return result;
 }

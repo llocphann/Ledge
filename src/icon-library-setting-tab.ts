@@ -160,7 +160,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       item.icon = icon;
       if (item.iconSource === "vault") item.vaultIconPath = icon;
       else item.builtInIcon = icon;
-      await this.ledgePlugin.saveSettings(true, true);
+      await this.ledgePlugin.saveSettings(true, item.iconSource !== "vault");
       return;
     }
 
@@ -534,23 +534,34 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
   }
 
-  private renderIconControl(setting: Setting, key: string): void {
+  private renderIconControl(setting: Setting, key: string): () => void {
     const storedValue = this.getControlValue(key);
     const initialValue = typeof storedValue === "string" ? storedValue : "";
+    let pendingValue = initialValue;
+    let committedValue = initialValue;
+    let inputEl: HTMLInputElement | null = null;
     let setTextValue: ((value: string) => void) | null = null;
+
+    const commit = (): void => {
+      if (pendingValue === committedValue) return;
+      committedValue = pendingValue;
+      void this.setControlValue(key, pendingValue);
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Enter") commit();
+    };
 
     setting.controlEl.addClass("ledge-icon-setting-control");
     setting.addText((text) => {
       text
         .setPlaceholder("Home")
         .setValue(initialValue)
-        .onChange((value) => {
-          void this.setControlValue(key, value);
-        });
-      text.inputEl.setAttribute("aria-label", "Icon ID");
-      setTextValue = (value) => {
-        text.setValue(value);
-      };
+        .onChange((value) => { pendingValue = value; });
+      inputEl = text.inputEl;
+      inputEl.setAttribute("aria-label", "Icon ID");
+      inputEl.addEventListener("blur", commit);
+      inputEl.addEventListener("keydown", onKeyDown);
+      setTextValue = (value) => { text.setValue(value); };
     });
 
     setting.addButton((button) => {
@@ -559,11 +570,18 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         .setIcon("shapes")
         .onClick(() => {
           openIconPicker(this.pickerApp, (iconId) => {
+            pendingValue = iconId;
+            committedValue = iconId;
             setTextValue?.(iconId);
             void this.setControlValue(key, iconId);
           });
         });
     });
+
+    return () => {
+      inputEl?.removeEventListener("blur", commit);
+      inputEl?.removeEventListener("keydown", onKeyDown);
+    };
   }
 
   private parseIconItemKey(key: string): { id: string; field: string } | null {

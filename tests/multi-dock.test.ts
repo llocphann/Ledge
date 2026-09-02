@@ -182,17 +182,19 @@ void test("multi-dock runtime reuses the complete single-dock controller", () =>
   assert.doesNotMatch(source, /setInterval\(|MutationObserver/);
 });
 
-void test("Dock item Target path uses a bounded lazy suggester instead of the default file control", () => {
+void test("vault path controls use a bounded lazy suggester instead of eager file controls", () => {
   const source = fs.readFileSync("src/settings-tab.ts", "utf8");
 
-  assert.match(source, /class DockTargetSuggest extends AbstractInputSuggest<TFile>/);
+  assert.match(source, /class BoundedVaultFileSuggest extends AbstractInputSuggest<TFile>/);
   assert.match(source, /const TARGET_SUGGESTION_LIMIT = 50/);
   assert.match(source, /PRIMARY_TARGET_EXTENSIONS = new Set\(\["md", "base", "canvas"\]\)/);
   assert.match(source, /segment === "\.git" \|\| segment === "node_modules"/);
-  assert.match(source, /this\.files = app\.vault\.getFiles\(\)\.filter\(isTargetSuggestion\)/);
-  assert.doesNotMatch(source, /for \(const file of this\.files\) \{\s*if \(!isTargetSuggestion\(file\)\)/);
-  assert.match(source, /name: "Target path"[\s\S]*render: \(setting\) => this\.renderTargetPathControl/);
-  assert.doesNotMatch(source, /name: "Target path"[\s\S]{0,220}type: "file"/);
+  assert.match(source, /mode: "target" \| "all" \| "image"/);
+  assert.match(source, /searchableFiles = mode === "target"[\s\S]*preferredTargets[\s\S]*secondaryTargets/);
+  assert.match(source, /name: "Target path"[\s\S]*renderFilePathControl/);
+  assert.match(source, /name: "Exact file path"[\s\S]*renderFilePathControl/);
+  assert.match(source, /name: "Icon path"[\s\S]*renderFilePathControl/);
+  assert.doesNotMatch(source, /control:\s*\{\s*type: "file"/);
   assert.match(source, /suggester\.onSelect\(\(file\) =>/);
 });
 
@@ -219,3 +221,15 @@ void test("prerelease item settings use native reorder with lightweight row cont
   assert.match(main, /if \(syncIcons\) await syncIconifyCache/);
 });
 
+
+void test("item and visibility page identities refresh only after committed text edits", () => {
+  const source = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+
+  assert.match(source, /name: "Label"[\s\S]*renderCommittedTextControl[\s\S]*"Dock item label"[\s\S]*true/);
+  assert.match(source, /"Visibility rule value"[\s\S]*true/);
+  assert.match(source, /if \(event\.key === "Enter"\) commit\(\)/);
+  assert.match(source, /inputEl\.addEventListener\("blur", commit\)/);
+  assert.match(enhanced, /item\.iconSource !== "vault"/);
+  assert.doesNotMatch(enhanced, /\.onChange\(\(value\) => \{\s*void this\.setControlValue\(key, value\)/);
+});
