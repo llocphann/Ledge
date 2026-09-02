@@ -30,6 +30,16 @@ jobs:
         run: |
           set -euo pipefail
           cp .github/scripts/prerelease-item-optimization.py /tmp/prerelease-item-optimization.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/prerelease-item-optimization.py')
+          text = path.read_text()
+          old = r'''  assert.doesNotMatch(base, /onReorder:[\s\S]{0,420}saveSettings\(\)\.then\(\(\) => this\.update\(\)\)/);'''
+          new = r'''  assert.match(base, /heading: "Dock items"[\s\S]*onReorder: \(oldIndex, newIndex\) => \{[\s\S]*this\.ledge\.settings\.items\.splice\(newIndex, 0, item\);[\s\S]*void this\.ledge\.saveSettings\(\);[\s\S]*\},/);'''
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one regression assertion to replace, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
+          PY
           python3 /tmp/prerelease-item-optimization.py
           npm ci
           npm run check
