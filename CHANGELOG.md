@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Restore Obsidian's native drag-and-drop handle for Dock items and add accessible move-up / move-down buttons to each item row.
+- Reduce settings work after item reordering by avoiding a full settings rebuild after native drag operations.
+- Prefilter Target path candidates once when its suggester opens, keeping subsequent searches bounded to relevant Markdown, Base, and Canvas files.
+- Avoid external icon-cache synchronization for unrelated settings changes while still syncing when icon data or imported settings change.
+- Disambiguate duplicate Dock item page names in settings without changing the actual Dock labels.
+
 ## 2.0.1
 
 - Fix a freeze when opening or editing a Dock item's Target path in large vaults by replacing the eager vault-wide file control with a bounded lazy suggester.
