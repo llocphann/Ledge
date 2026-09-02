@@ -25,18 +25,13 @@ replace_once(
 icon_tab = "src/icon-library-setting-tab.ts"
 replace_once(
     icon_tab,
-    '''import {\n  Notice,\n  Setting,\n  setIcon,\n  type App,\n''',
-    '''import {\n  Notice,\n  Setting,\n  type App,\n''',
-)
-replace_once(
-    icon_tab,
     '''  ) {\n    super(app, ledgePlugin);\n  }\n\n  override getSettingDefinitions(): SettingDefinitionItem[] {\n''',
-    '''  ) {\n    super(app, ledgePlugin);\n  }\n\n  override display(): void {\n    super.display();\n    this.scheduleItemRowControls();\n  }\n\n  override update(): void {\n    super.update();\n    this.scheduleItemRowControls();\n  }\n\n  override getSettingDefinitions(): SettingDefinitionItem[] {\n''',
+    '''  ) {\n    super(app, ledgePlugin);\n  }\n\n  override update(): void {\n    super.update();\n    this.scheduleItemRowControls();\n  }\n\n  override getSettingDefinitions(): SettingDefinitionItem[] {\n''',
 )
 replace_once(
     icon_tab,
     '''    this.decorateControls(definitions);\n    this.scheduleItemRowControls();\n    return definitions;\n''',
-    '''    this.decorateControls(definitions);\n    return definitions;\n''',
+    '''    this.decorateControls(definitions);\n    if (this.containerEl.isConnected) this.scheduleItemRowControls();\n    return definitions;\n''',
 )
 replace_once(
     icon_tab,
@@ -70,7 +65,7 @@ replace_once(
 replace_once(
     tests,
     '''  assert.match(enhanced, /scheduleItemRowControls/);\n  assert.match(enhanced, /setIcon\\(grip, "grip-vertical"\\)/);\n  assert.match(enhanced, /"aria-label": "Move dock item up"/);\n''',
-    '''  assert.match(enhanced, /override display\\(\\): void \\{[\\s\\S]*super\\.display\\(\\);[\\s\\S]*this\\.scheduleItemRowControls\\(\\);/);\n  assert.match(enhanced, /override update\\(\\): void \\{[\\s\\S]*super\\.update\\(\\);[\\s\\S]*this\\.scheduleItemRowControls\\(\\);/);\n  assert.doesNotMatch(enhanced, /grip-vertical|ledge-item-drag-affordance/);\n  assert.match(enhanced, /"aria-label": "Move dock item up"/);\n''',
+    '''  assert.match(enhanced, /override update\\(\\): void \\{[\\s\\S]*super\\.update\\(\\);[\\s\\S]*this\\.scheduleItemRowControls\\(\\);/);\n  assert.match(enhanced, /if \\(this\\.containerEl\\.isConnected\\) this\\.scheduleItemRowControls\\(\\)/);\n  assert.doesNotMatch(enhanced, /grip-vertical|ledge-item-drag-affordance/);\n  assert.match(enhanced, /"aria-label": "Move dock item up"/);\n''',
 )
 replace_once(
     tests,
