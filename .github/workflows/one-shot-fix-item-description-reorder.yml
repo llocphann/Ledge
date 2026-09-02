@@ -1,0 +1,45 @@
+name: One-shot fix item description reorder
+
+on:
+  push:
+    branches: [prerelease]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message == 'Run item description reorder fix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Patch and validate
+        run: |
+          set -euo pipefail
+          cp .github/scripts/fix-item-description-reorder.py /tmp/fix-item-description-reorder.py
+          python3 /tmp/fix-item-description-reorder.py
+          npm ci
+          npm run check
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add src/settings-tab.ts src/icon-library-setting-tab.ts tests/multi-dock.test.ts CHANGELOG.md main.js
+          git commit -m "Fix item descriptions after settings reorder"
+          git push origin prerelease
+      - name: Remove temporary tooling
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch origin prerelease
+          git reset --hard origin/prerelease
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git rm -f .github/workflows/one-shot-fix-item-description-reorder.yml .github/scripts/fix-item-description-reorder.py
+          git commit -m "Remove temporary item description tooling"
+          git push origin prerelease
