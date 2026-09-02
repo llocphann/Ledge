@@ -856,7 +856,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         const [item] = this.ledge.settings.items.splice(oldIndex, 1);
         if (!item) return;
         this.ledge.settings.items.splice(newIndex, 0, item);
-        void this.ledge.saveSettings().then(() => this.update());
+        void this.ledge.saveSettings();
       },
       onDelete: (index) => {
         const item = this.ledge.settings.items[index];
@@ -952,8 +952,8 @@ export class LedgeSettingTab extends PluginSettingTab {
     const key = (field: string): string => `item:${item.id}:${field}`;
     return {
       type: "page",
-      name: item.label || item.target || `Item ${index + 1}`,
-      desc: item.target || "No target path",
+      name: this.itemPageName(item, index),
+      desc: this.itemRowDescription(item),
       displayValue: () => item.enabled ? "Enabled" : "Hidden",
       status: () => this.targetExists(item.target) ? null : "warning",
       items: [
@@ -1060,6 +1060,29 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
       ],
     };
+  }
+
+  private itemPageName(item: DockItemSettings, index: number): string {
+    const base = item.label || item.target || `Item ${index + 1}`;
+    let occurrence = 1;
+    for (let candidateIndex = 0; candidateIndex < index; candidateIndex += 1) {
+      const candidate = this.ledge.settings.items[candidateIndex];
+      if (!candidate) continue;
+      const candidateBase = candidate.label || candidate.target || `Item ${candidateIndex + 1}`;
+      if (candidateBase === base) occurrence += 1;
+    }
+    return occurrence === 1 ? base : `${base} (${occurrence})`;
+  }
+
+  private itemRowDescription(item: DockItemSettings): DocumentFragment {
+    const doc = this.containerEl.ownerDocument;
+    const fragment = doc.createDocumentFragment();
+    fragment.append(item.target || "No target path");
+    const marker = doc.createElement("span");
+    marker.className = "ledge-item-row-marker";
+    marker.dataset.ledgeItemId = item.id;
+    fragment.append(marker);
+    return fragment;
   }
 
   private renderTargetPathControl(setting: Setting, key: string): () => void {
@@ -1292,7 +1315,7 @@ export class LedgeSettingTab extends PluginSettingTab {
     }
     try {
       this.ledge.settings = parseLedgeSettingsImport(await file.text());
-      await this.ledge.saveSettings();
+      await this.ledge.saveSettings(true, true);
       this.update();
       new Notice("Ledge settings imported.");
     } catch (error) {

@@ -722,6 +722,37 @@
   font-size: var(--font-ui-smaller);
 }
 
+.ledge-item-row-marker {
+  display: none;
+}
+
+.ledge-item-order-controls {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  margin-left: var(--size-4-1);
+}
+
+.ledge-item-drag-affordance {
+  width: var(--icon-s);
+  height: var(--icon-s);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  cursor: grab;
+}
+
+.ledge-item-drag-affordance:active {
+  cursor: grabbing;
+}
+
+.ledge-item-order-button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
 .ledge-settings-root:not([data-ledge-settings-tab="layout"]) .ledge-settings-panel-layout,
 .ledge-settings-root:not([data-ledge-settings-tab="behavior"]) .ledge-settings-panel-behavior,
 .ledge-settings-root:not([data-ledge-settings-tab="visibility"]) .ledge-settings-panel-visibility,

@@ -194,3 +194,22 @@ void test("Dock item Target path uses a bounded lazy suggester instead of the de
   assert.match(source, /suggester\.onSelect\(\(file\) =>/);
 });
 
+void test("prerelease item settings use native reorder with lightweight row controls", () => {
+  const base = fs.readFileSync("src/settings-tab.ts", "utf8");
+  const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const main = fs.readFileSync("src/main.ts", "utf8");
+
+  assert.match(base, /onReorder: \(oldIndex, newIndex\) =>/);
+  assert.match(base, /heading: "Dock items"[\s\S]*onReorder: \(oldIndex, newIndex\) => \{[\s\S]*this\.ledge\.settings\.items\.splice\(newIndex, 0, item\);[\s\S]*void this\.ledge\.saveSettings\(\);[\s\S]*\},/);
+  assert.match(base, /name: this\.itemPageName\(item, index\)/);
+  assert.match(base, /marker\.dataset\.ledgeItemId = item\.id/);
+  assert.match(enhanced, /scheduleItemRowControls/);
+  assert.match(enhanced, /setIcon\(grip, "grip-vertical"\)/);
+  assert.match(enhanced, /"aria-label": "Move dock item up"/);
+  assert.match(enhanced, /"aria-label": "Move dock item down"/);
+  assert.match(enhanced, /private moveDockItem\(itemId: string, delta: -1 \| 1\)/);
+  assert.doesNotMatch(enhanced, /dragstart|dragover|dropEffect|dataTransfer/);
+  assert.match(main, /async saveSettings\(refresh = true, syncIcons = false\)/);
+  assert.match(main, /if \(syncIcons\) await syncIconifyCache/);
+});
+

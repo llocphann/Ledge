@@ -1,6 +1,7 @@
 import {
   Notice,
   Setting,
+  setIcon,
   type App,
   type SettingDefinitionItem,
   type SettingGroupItem,
@@ -124,6 +125,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
 
     this.decorateControls(definitions);
+    this.scheduleItemRowControls();
     return definitions;
   }
 
@@ -143,7 +145,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
 
       item.iconSource = value === "vault" ? "vault" : "lucide";
       item.icon = item.iconSource === "vault" ? item.vaultIconPath : item.builtInIcon;
-      await this.ledgePlugin.saveSettings();
+      await this.ledgePlugin.saveSettings(true, true);
       this.update();
       return;
     }
@@ -153,7 +155,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       item.icon = icon;
       if (item.iconSource === "vault") item.vaultIconPath = icon;
       else item.builtInIcon = icon;
-      await this.ledgePlugin.saveSettings();
+      await this.ledgePlugin.saveSettings(true, true);
       return;
     }
 
@@ -410,6 +412,85 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }).then((deleted) => {
       if (deleted) this.update();
     });
+  }
+
+  private scheduleItemRowControls(attempt = 0): void {
+    const view = this.containerEl.ownerDocument.defaultView;
+    if (!view) return;
+    view.requestAnimationFrame(() => {
+      const decorated = this.decorateItemRowControls();
+      if (decorated < this.ledgePlugin.settings.items.length && attempt < 2) {
+        this.scheduleItemRowControls(attempt + 1);
+      }
+    });
+  }
+
+  private decorateItemRowControls(): number {
+    const markers = Array.from(this.containerEl.querySelectorAll<HTMLElement>(
+      ".ledge-item-row-marker[data-ledge-item-id]",
+    ));
+    const items = this.ledgePlugin.settings.items;
+
+    for (const marker of markers) {
+      const itemId = marker.dataset.ledgeItemId;
+      const row = marker.closest<HTMLElement>(".setting-item");
+      if (!itemId || !row) continue;
+      const controlEl = row.querySelector<HTMLElement>(".setting-item-control");
+      if (!controlEl || controlEl.querySelector(".ledge-item-order-controls")) continue;
+
+      const index = items.findIndex((item) => item.id === itemId);
+      if (index < 0) continue;
+      const controls = controlEl.createSpan({ cls: "ledge-item-order-controls" });
+
+      const grip = controls.createSpan({ cls: "ledge-item-drag-affordance" });
+      setIcon(grip, "grip-vertical");
+      grip.setAttribute("aria-hidden", "true");
+      grip.setAttribute("title", "Drag to reorder");
+
+      const upButton = controls.createEl("button", {
+        cls: "clickable-icon ledge-item-order-button",
+        attr: { type: "button", "aria-label": "Move dock item up" },
+      });
+      upButton.disabled = index === 0;
+      setIcon(upButton, "arrow-up");
+      upButton.addEventListener("pointerdown", (event: PointerEvent) => event.stopPropagation());
+      upButton.addEventListener("click", (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.moveDockItem(itemId, -1);
+      });
+
+      const downButton = controls.createEl("button", {
+        cls: "clickable-icon ledge-item-order-button",
+        attr: { type: "button", "aria-label": "Move dock item down" },
+      });
+      downButton.disabled = index === items.length - 1;
+      setIcon(downButton, "arrow-down");
+      downButton.addEventListener("pointerdown", (event: PointerEvent) => event.stopPropagation());
+      downButton.addEventListener("click", (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.moveDockItem(itemId, 1);
+      });
+
+      const navigationControl = controlEl.lastElementChild;
+      if (navigationControl && navigationControl !== controls) {
+        controlEl.insertBefore(controls, navigationControl);
+      }
+    }
+
+    return markers.length;
+  }
+
+  private moveDockItem(itemId: string, delta: -1 | 1): void {
+    const items = this.ledgePlugin.settings.items;
+    const index = items.findIndex((item) => item.id === itemId);
+    const nextIndex = index + delta;
+    if (index < 0 || nextIndex < 0 || nextIndex >= items.length) return;
+    const [item] = items.splice(index, 1);
+    if (!item) return;
+    items.splice(nextIndex, 0, item);
+    void this.ledgePlugin.saveSettings().then(() => this.update());
   }
 
   private decorateControls(definitions: SettingDefinitionItem[]): void {
