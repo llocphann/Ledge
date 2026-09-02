@@ -83,6 +83,10 @@ type MutableSettingDefinition = {
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   private activeDockSection: DockSettingsSection = "items";
   private draggedItemId: string | null = null;
+  private dragPointerId: number | null = null;
+  private dragTargetItemId: string | null = null;
+  private dragDropAfter = false;
+  private activeDragHandle: HTMLButtonElement | null = null;
 
   constructor(
     app: App,
@@ -92,20 +96,11 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     super(app, ledgePlugin);
   }
 
-  override display(): void {
-    super.display();
-    this.scheduleItemRowControls();
-  }
-
-  override update(): void {
-    super.update();
-    this.scheduleItemRowControls();
-  }
-
   override getSettingDefinitions(): SettingDefinitionItem[] {
     const baseDefinitions = super.getSettingDefinitions();
     const definitions: SettingDefinitionItem[] = [];
     let dockWorkspaceInserted = false;
+    let itemDecoratorInserted = false;
 
     this.containerEl.classList.add("ledge-settings-root");
     this.applyDockSectionVisibility();
@@ -132,11 +127,14 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         definitions.push(this.dockWorkspaceDefinitions());
         dockWorkspaceInserted = true;
       }
+      if (section === "items" && !itemDecoratorInserted) {
+        definitions.push(this.itemRowDecoratorDefinition());
+        itemDecoratorInserted = true;
+      }
       definitions.push(definition);
     }
 
     this.decorateControls(definitions);
-    if (this.containerEl.isConnected) this.scheduleItemRowControls();
     return definitions;
   }
 
@@ -171,6 +169,18 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
 
     await super.setControlValue(key, value);
+  }
+
+  private itemRowDecoratorDefinition(): SettingDefinitionItem {
+    return {
+      name: "Dock item reorder controls",
+      cls: "ledge-item-row-decorator",
+      searchable: false,
+      render: () => {
+        this.scheduleItemRowControls();
+        return () => this.clearItemDragState();
+      },
+    };
   }
 
   private applyDockSectionVisibility(): void {
@@ -501,48 +511,24 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         attr: {
           type: "button",
           "aria-label": "Drag to reorder dock item",
-          draggable: "true",
         },
       });
-      dragButton.draggable = true;
       setIcon(dragButton, "grip-vertical");
-      dragButton.addEventListener("pointerdown", (event: PointerEvent) => event.stopPropagation());
       dragButton.addEventListener("click", (event: MouseEvent) => {
         event.preventDefault();
         event.stopPropagation();
       });
-      dragButton.addEventListener("dragstart", (event: DragEvent) => {
-        this.draggedItemId = itemId;
-        row.classList.add("is-ledge-item-dragging");
-        if (event.dataTransfer) {
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", itemId);
-        }
+      dragButton.addEventListener("pointerdown", (event: PointerEvent) => {
+        this.beginItemPointerDrag(event, itemId, dragButton);
       });
-      dragButton.addEventListener("dragend", () => this.clearItemDragState());
-
-      row.addEventListener("dragover", (event: DragEvent) => {
-        if (!this.draggedItemId || this.draggedItemId === itemId) return;
-        event.preventDefault();
-        event.stopPropagation();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-        const rect = row.getBoundingClientRect();
-        const dropAfter = event.clientY >= rect.top + rect.height / 2;
-        row.classList.toggle("is-ledge-item-drop-before", !dropAfter);
-        row.classList.toggle("is-ledge-item-drop-after", dropAfter);
+      dragButton.addEventListener("pointermove", (event: PointerEvent) => {
+        this.updateItemPointerDrag(event);
       });
-      row.addEventListener("dragleave", (event: DragEvent) => {
-        if (event.relatedTarget && row.contains(event.relatedTarget as Node)) return;
-        row.classList.remove("is-ledge-item-drop-before", "is-ledge-item-drop-after");
+      dragButton.addEventListener("pointerup", (event: PointerEvent) => {
+        this.finishItemPointerDrag(event, dragButton);
       });
-      row.addEventListener("drop", (event: DragEvent) => {
-        const sourceId = this.draggedItemId;
-        if (!sourceId || sourceId === itemId) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const dropAfter = row.classList.contains("is-ledge-item-drop-after");
-        this.reorderDockItem(sourceId, itemId, dropAfter);
-        this.clearItemDragState();
+      dragButton.addEventListener("pointercancel", (event: PointerEvent) => {
+        if (event.pointerId === this.dragPointerId) this.clearItemDragState();
       });
 
       const upButton = controls.createEl("button", {
@@ -580,6 +566,81 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     return rows.length;
   }
 
+  private beginItemPointerDrag(
+    event: PointerEvent,
+    itemId: string,
+    handle: HTMLButtonElement,
+  ): void {
+    if (event.button !== 0 || this.dragPointerId !== null) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.draggedItemId = itemId;
+    this.dragPointerId = event.pointerId;
+    this.dragTargetItemId = null;
+    this.dragDropAfter = false;
+    this.activeDragHandle = handle;
+    handle.setPointerCapture(event.pointerId);
+
+    const source = this.itemRows().find((candidate) => candidate.itemId === itemId);
+    source?.row.classList.add("is-ledge-item-dragging");
+  }
+
+  private updateItemPointerDrag(event: PointerEvent): void {
+    if (event.pointerId !== this.dragPointerId || !this.draggedItemId) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const rows = this.itemRows();
+    for (const { row } of rows) {
+      row.classList.remove("is-ledge-item-drop-before", "is-ledge-item-drop-after");
+    }
+
+    const hit = this.containerEl.ownerDocument.elementFromPoint(event.clientX, event.clientY);
+    let target = hit
+      ? rows.find(({ row }) => row.contains(hit))
+      : undefined;
+
+    if (!target && rows.length > 0) {
+      let closestDistance = Number.POSITIVE_INFINITY;
+      for (const candidate of rows) {
+        const rect = candidate.row.getBoundingClientRect();
+        const distance = Math.abs(event.clientY - (rect.top + rect.height / 2));
+        if (distance >= closestDistance) continue;
+        closestDistance = distance;
+        target = candidate;
+      }
+    }
+
+    if (!target || target.itemId === this.draggedItemId) {
+      this.dragTargetItemId = null;
+      this.dragDropAfter = false;
+      return;
+    }
+
+    const rect = target.row.getBoundingClientRect();
+    const dropAfter = event.clientY >= rect.top + rect.height / 2;
+    this.dragTargetItemId = target.itemId;
+    this.dragDropAfter = dropAfter;
+    target.row.classList.add(dropAfter ? "is-ledge-item-drop-after" : "is-ledge-item-drop-before");
+  }
+
+  private finishItemPointerDrag(event: PointerEvent, handle: HTMLButtonElement): void {
+    if (event.pointerId !== this.dragPointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const sourceId = this.draggedItemId;
+    const targetId = this.dragTargetItemId;
+    const dropAfter = this.dragDropAfter;
+    if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    this.clearItemDragState();
+
+    if (sourceId && targetId && sourceId !== targetId) {
+      this.reorderDockItem(sourceId, targetId, dropAfter);
+    }
+  }
+
   private reorderDockItem(sourceId: string, targetId: string, dropAfter: boolean): void {
     const items = this.ledgePlugin.settings.items;
     const sourceIndex = items.findIndex((item) => item.id === sourceId);
@@ -597,7 +658,18 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
   }
 
   private clearItemDragState(): void {
+    if (
+      this.activeDragHandle
+      && this.dragPointerId !== null
+      && this.activeDragHandle.hasPointerCapture(this.dragPointerId)
+    ) {
+      this.activeDragHandle.releasePointerCapture(this.dragPointerId);
+    }
     this.draggedItemId = null;
+    this.dragPointerId = null;
+    this.dragTargetItemId = null;
+    this.dragDropAfter = false;
+    this.activeDragHandle = null;
     for (const { row } of this.itemRows()) {
       row.classList.remove(
         "is-ledge-item-dragging",

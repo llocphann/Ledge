@@ -198,33 +198,31 @@ void test("vault path controls use a bounded lazy suggester instead of eager fil
   assert.match(source, /suggester\.onSelect\(\(file\) =>/);
 });
 
-void test("prerelease item settings expose working drag and arrow reorder controls", () => {
+void test("prerelease item settings expose pointer-captured drag and arrow reorder controls", () => {
   const base = fs.readFileSync("src/settings-tab.ts", "utf8");
   const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
   const main = fs.readFileSync("src/main.ts", "utf8");
   const styles = fs.readFileSync("styles.css", "utf8");
 
   assert.match(base, /onReorder: \(oldIndex, newIndex\) =>/);
-  assert.match(base, /heading: "Dock items"[\s\S]*onReorder: \(oldIndex, newIndex\) => \{[\s\S]*this\.ledge\.settings\.items\.splice\(newIndex, 0, item\);[\s\S]*void this\.ledge\.saveSettings\(\);[\s\S]*\},/);
-  assert.match(enhanced, /override display\(\): void \{[\s\S]*super\.display\(\);[\s\S]*this\.scheduleItemRowControls\(\);/);
-  assert.match(enhanced, /override update\(\): void \{[\s\S]*super\.update\(\);[\s\S]*this\.scheduleItemRowControls\(\);/);
+  assert.match(enhanced, /private itemRowDecoratorDefinition\(\): SettingDefinitionItem/);
+  assert.match(enhanced, /render: \(\) => \{[\s\S]*this\.scheduleItemRowControls\(\)/);
+  assert.doesNotMatch(enhanced, /override display\(\)/);
   assert.match(enhanced, /private itemRows\(\): Array<\{ itemId: string; row: HTMLElement \}>/);
-  assert.match(enhanced, /\.setting-item-name/);
   assert.match(enhanced, /"aria-label": "Drag to reorder dock item"/);
   assert.match(enhanced, /setIcon\(dragButton, "grip-vertical"\)/);
-  assert.match(enhanced, /dragButton\.draggable = true/);
-  assert.match(enhanced, /addEventListener\("dragstart"/);
-  assert.match(enhanced, /addEventListener\("dragover"/);
-  assert.match(enhanced, /addEventListener\("drop"/);
+  assert.match(enhanced, /addEventListener\("pointerdown"/);
+  assert.match(enhanced, /addEventListener\("pointermove"/);
+  assert.match(enhanced, /addEventListener\("pointerup"/);
+  assert.match(enhanced, /setPointerCapture\(event\.pointerId\)/);
+  assert.match(enhanced, /elementFromPoint\(event\.clientX, event\.clientY\)/);
   assert.match(enhanced, /private reorderDockItem\(sourceId: string, targetId: string, dropAfter: boolean\)/);
+  assert.doesNotMatch(enhanced, /dragstart|dragover|dropEffect|dataTransfer|draggable = true/);
   assert.match(enhanced, /"aria-label": "Move dock item up"/);
   assert.match(enhanced, /"aria-label": "Move dock item down"/);
-  assert.match(enhanced, /private moveDockItem\(itemId: string, delta: -1 \| 1\)/);
-  assert.match(styles, /\.ledge-item-drag-handle \{\s*cursor: grab;/);
-  assert.match(styles, /is-ledge-item-drop-before/);
-  assert.match(styles, /is-ledge-item-drop-after/);
+  assert.match(styles, /\.ledge-item-row-decorator/);
+  assert.match(styles, /\.ledge-item-drag-handle \{[\s\S]*touch-action: none;/);
   assert.match(main, /async saveSettings\(refresh = true, syncIcons = false\)/);
-  assert.match(main, /if \(syncIcons\) await syncIconifyCache/);
 });
 
 

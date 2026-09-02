@@ -721,7 +721,8 @@
   font-size: var(--font-ui-smaller);
 }
 
-.ledge-item-row-marker {
+.ledge-item-row-marker,
+.ledge-item-row-decorator {
   display: none;
 }
 
@@ -735,6 +736,8 @@
 
 .ledge-item-drag-handle {
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .ledge-item-drag-handle:active {
