@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fix Dock item Settings rows so reorder controls initialize on first display; add an explicit draggable grip plus visible move-up / move-down buttons instead of relying only on Obsidian's native list affordance.
 - Fix external Iconify previews and Dock icons rendering too small by normalizing their SVG bodies to Obsidian's custom-icon coordinate space and migrating the existing icon cache.
 - Keep Dock item and visibility-rule titles synchronized after committed label/path/value edits without saving every keystroke.
 - Replace the remaining eager vault file controls with bounded suggesters for visibility paths and vault-image icons; Target path search can now discover other file types when a query is entered.
