@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 2.0.1
+
+- Fix a freeze when opening or editing a Dock item's Target path in large vaults by replacing the eager vault-wide file control with a bounded lazy suggester.
+- Limit Target path suggestions to 50 relevant Markdown, Base, and Canvas files while excluding `.git` and `node_modules` paths.
+
 ## 2.0.0
 
 - Add up to eight named Dock presets that can render simultaneously, with add, duplicate, rename, select, enable/disable, and delete controls.
