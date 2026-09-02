@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2.1.0
+
 - Remove vault-specific default item paths and the remaining personal folder placeholder from the distributed build; fresh installs now start with an empty Dock item list.
 - Fix Dock item row descriptions turning into `[object DocumentFragment]` after drag or arrow reordering by keeping descriptions as plain text and storing row identity in DOM data attributes.
 - Fix Dock item Settings reorder initialization with a declarative render hook, and replace unreliable HTML5 drag/drop with pointer-captured dragging while retaining visible move-up / move-down buttons.
