@@ -91,6 +91,11 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     super(app, ledgePlugin);
   }
 
+  override update(): void {
+    super.update();
+    this.scheduleItemRowControls();
+  }
+
   override getSettingDefinitions(): SettingDefinitionItem[] {
     const baseDefinitions = super.getSettingDefinitions();
     const definitions: SettingDefinitionItem[] = [];
@@ -125,7 +130,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
 
     this.decorateControls(definitions);
-    this.scheduleItemRowControls();
+    if (this.containerEl.isConnected) this.scheduleItemRowControls();
     return definitions;
   }
 
@@ -441,11 +446,6 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       const index = items.findIndex((item) => item.id === itemId);
       if (index < 0) continue;
       const controls = controlEl.createSpan({ cls: "ledge-item-order-controls" });
-
-      const grip = controls.createSpan({ cls: "ledge-item-drag-affordance" });
-      setIcon(grip, "grip-vertical");
-      grip.setAttribute("aria-hidden", "true");
-      grip.setAttribute("title", "Drag to reorder");
 
       const upButton = controls.createEl("button", {
         cls: "clickable-icon ledge-item-order-button",

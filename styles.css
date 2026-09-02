@@ -706,7 +706,6 @@
 
 .ledge-settings-panel-items .setting-item {
   padding-right: 0;
-  padding-left: 0;
 }
 
 .ledge-settings-panel-items .setting-item-control input[type="text"] {
@@ -732,20 +731,6 @@
   flex: 0 0 auto;
   gap: 2px;
   margin-left: var(--size-4-1);
-}
-
-.ledge-item-drag-affordance {
-  width: var(--icon-s);
-  height: var(--icon-s);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-faint);
-  cursor: grab;
-}
-
-.ledge-item-drag-affordance:active {
-  cursor: grabbing;
 }
 
 .ledge-item-order-button:disabled {

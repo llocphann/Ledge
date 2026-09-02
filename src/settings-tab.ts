@@ -52,7 +52,7 @@ class DockTargetSuggest extends AbstractInputSuggest<TFile> {
   constructor(app: App, inputEl: HTMLInputElement) {
     super(app, inputEl);
     this.limit = TARGET_SUGGESTION_LIMIT;
-    this.files = app.vault.getFiles();
+    this.files = app.vault.getFiles().filter(isTargetSuggestion);
   }
 
   protected getSuggestions(query: string): TFile[] {
@@ -60,7 +60,6 @@ class DockTargetSuggest extends AbstractInputSuggest<TFile> {
     const search = normalized ? prepareSimpleSearch(normalized) : null;
     const suggestions: TFile[] = [];
     for (const file of this.files) {
-      if (!isTargetSuggestion(file)) continue;
       if (search && !search(file.path)) continue;
       suggestions.push(file);
       if (suggestions.length >= TARGET_SUGGESTION_LIMIT) break;
