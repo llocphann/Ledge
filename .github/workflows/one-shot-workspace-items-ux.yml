@@ -22,7 +22,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Apply implementation
-        run: python3 .github/scripts/patch-workspace-items.py
+        run: |
+          python3 .github/scripts/patch-workspace-items.py
+          python3 .github/scripts/fix-item-accordion.py
       - name: Validate
         run: |
           npm run check
@@ -36,6 +38,6 @@ jobs:
           git push origin prerelease
       - name: Remove temporary tooling
         run: |
-          git rm .github/workflows/one-shot-workspace-items-ux.yml .github/scripts/patch-workspace-items.py
+          git rm .github/workflows/one-shot-workspace-items-ux.yml .github/scripts/patch-workspace-items.py .github/scripts/fix-item-accordion.py
           git commit -m "Remove temporary workspace item UX tooling"
           git push origin prerelease
