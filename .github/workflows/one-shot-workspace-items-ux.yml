@@ -1,0 +1,925 @@
+name: One-shot workspace and item UX
+
+on:
+  push:
+    branches: [prerelease]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: contains(github.event.head_commit.message, '[workspace-items-ux]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prerelease
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply workspace anchoring and item accordion
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise SystemExit(f"missing patch anchor: {label}")
+              return text.replace(old, new, 1)
+
+          # Dock geometry: mount inside the central workspace and observe its live size.
+          p = Path("src/dock.ts")
+          text = p.read_text()
+          text = replace_once(text,
+          '''  private visible = false;
+          private previousAutoHide: boolean | null = null;
+          private renderVersion = 0;
+          ''',
+          '''  private visible = false;
+          private previousAutoHide: boolean | null = null;
+          private renderVersion = 0;
+          private geometryObserver: ResizeObserver | null = null;
+          private observedGeometryElements: Element[] = [];
+          ''', "dock observer fields")
+          text = replace_once(text,
+          '''  onload(): void {
+              this.root = this.document.body.createDiv({ cls: "ledge-dock-root" });
+              this.root.dataset.ledgeDockRoot = "true";
+          ''',
+          '''  onload(): void {
+              this.root = this.document.createElement("div");
+              this.root.className = "ledge-dock-root";
+              this.root.dataset.ledgeDockRoot = "true";
+              (this.workspaceHost() ?? this.document.body).appendChild(this.root);
+          ''', "dock workspace mount")
+          text = replace_once(text,
+          '''    const view = this.document.defaultView;
+              if (view) this.registerDomEvent(view, "resize", () => this.refreshGeometryAndActiveState());
+              this.register(() => {
+                this.clearTimers();
+                this.root.remove();
+              });
+          ''',
+          '''    const view = this.document.defaultView;
+              if (view) this.registerDomEvent(view, "resize", () => this.refreshGeometryAndActiveState());
+              this.bindGeometryObserver();
+              this.register(() => {
+                this.clearTimers();
+                this.geometryObserver?.disconnect();
+                this.geometryObserver = null;
+                this.observedGeometryElements = [];
+                this.root.remove();
+              });
+          ''', "dock observer lifecycle")
+          text = replace_once(text,
+          '''  refreshGeometryAndActiveState(): void {
+              if (!this.isMounted() || !this.syncVisibility()) return;
+              if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
+              this.positionAgainstRootPane();
+              this.markActiveTarget();
+            }
+          ''',
+          '''  refreshGeometryAndActiveState(): void {
+              if (!this.isMounted() || !this.syncVisibility()) return;
+              if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
+              this.ensureWorkspaceHost();
+              this.bindGeometryObserver();
+              this.positionAgainstRootPane();
+              this.markActiveTarget();
+            }
+          ''', "dock refresh geometry")
+          marker = '''  private positionAgainstRootPane(): void {
+          '''
+          insertion = '''  private workspaceHost(): HTMLElement | null {
+              const leaf = this.controller.leafForDocument(this.document);
+              const leafContainer = leaf?.view?.containerEl;
+              return leafContainer?.closest<HTMLElement>(".workspace-split.mod-root")
+                ?? this.document.querySelector<HTMLElement>(".workspace-split.mod-root")
+                ?? this.document.querySelector<HTMLElement>(".workspace");
+            }
+
+            private activeWorkspaceContent(
+              leaf: WorkspaceLeaf | null,
+              leafContainer: HTMLElement | undefined,
+            ): HTMLElement | null {
+              return (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
+                ?? leafContainer?.querySelector<HTMLElement>(".view-content")
+                ?? leafContainer
+                ?? null;
+            }
+
+            private ensureWorkspaceHost(): void {
+              const host = this.workspaceHost();
+              if (host && this.root.parentElement !== host) host.appendChild(this.root);
+            }
+
+            private bindGeometryObserver(): void {
+              const view = this.document.defaultView;
+              const ResizeObserverCtor = view?.ResizeObserver;
+              if (!ResizeObserverCtor) return;
+
+              const host = this.workspaceHost();
+              const leaf = this.controller.leafForDocument(this.document);
+              const leafContainer = leaf?.view?.containerEl;
+              const content = this.activeWorkspaceContent(leaf, leafContainer);
+              const elements = [host, content].filter((element): element is HTMLElement => Boolean(element));
+              const uniqueElements = elements.filter((element, index) => elements.indexOf(element) === index);
+              const unchanged = uniqueElements.length === this.observedGeometryElements.length
+                && uniqueElements.every((element, index) => element === this.observedGeometryElements[index]);
+              if (unchanged) return;
+
+              if (!this.geometryObserver) {
+                this.geometryObserver = new ResizeObserverCtor(() => this.refreshGeometryAndActiveState());
+              } else {
+                this.geometryObserver.disconnect();
+              }
+              this.observedGeometryElements = uniqueElements;
+              for (const element of uniqueElements) this.geometryObserver.observe(element);
+            }
+
+            private positionAgainstRootPane(): void {
+          '''
+          text = replace_once(text, marker, insertion, "dock workspace helpers")
+          old_anchor = '''  private anchorRectForPosition(
+              position: DockPosition,
+              leaf: WorkspaceLeaf | null,
+              leafContainer: HTMLElement | undefined,
+              fallbackRect: DOMRect,
+            ): DOMRect {
+              const usesActiveViewAnchor = position === "top"
+                || position === "bottom"
+                || position === "top-left"
+                || position === "top-right";
+              if (!usesActiveViewAnchor) return fallbackRect;
+
+              const viewContent = (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
+                ?? leafContainer?.querySelector<HTMLElement>(".view-content")
+                ?? leafContainer;
+              const contentRect = viewContent?.getBoundingClientRect();
+              if (!contentRect || contentRect.width <= 0 || contentRect.height <= 0) return fallbackRect;
+              return contentRect;
+            }
+          '''
+          new_anchor = '''  private anchorRectForPosition(
+              _position: DockPosition,
+              leaf: WorkspaceLeaf | null,
+              leafContainer: HTMLElement | undefined,
+              fallbackRect: DOMRect,
+            ): DOMRect {
+              const viewContent = this.activeWorkspaceContent(leaf, leafContainer);
+              const contentRect = viewContent?.getBoundingClientRect();
+              if (!contentRect || contentRect.width <= 0 || contentRect.height <= 0) return fallbackRect;
+              return contentRect;
+            }
+          '''
+          text = replace_once(text, old_anchor, new_anchor, "all dock positions use active workspace content")
+          p.write_text(text)
+
+          # Base settings helpers: confirmation modal and no full-tab rerender after Label/Target commit.
+          p = Path("src/settings-tab.ts")
+          text = p.read_text()
+          text = replace_once(text, '''  Notice,\n  PluginSettingTab,\n''', '''  Notice,\n  Modal,\n  PluginSettingTab,\n''', "Modal import")
+          text = replace_once(text,
+          '''const SETTINGS_TABS = [
+            { id: "layout", label: "Layout", icon: "layout-dashboard" },
+            { id: "behavior", label: "Behavior", icon: "timer" },
+            { id: "visibility", label: "Visibility", icon: "list-filter" },
+            { id: "trigger", label: "Trigger", icon: "mouse-pointer-2" },
+            { id: "appearance", label: "Appearance", icon: "palette" },
+            { id: "items", label: "Items", icon: "list" },
+            { id: "data", label: "Data", icon: "database-backup" },
+            { id: "about", label: "About", icon: "info" },
+          ] as const;
+          ''',
+          '''const SETTINGS_TABS = [
+            { id: "appearance", label: "Appearance", icon: "palette" },
+            { id: "layout", label: "Layout", icon: "layout-dashboard" },
+            { id: "behavior", label: "Behavior", icon: "timer" },
+            { id: "visibility", label: "Visibility", icon: "list-filter" },
+            { id: "items", label: "Items", icon: "list" },
+            { id: "trigger", label: "Trigger", icon: "mouse-pointer-2" },
+            { id: "data", label: "Data", icon: "database-backup" },
+            { id: "about", label: "About", icon: "info" },
+          ] as const;
+          ''', "base tab order")
+          text = replace_once(text,
+          '''    return [
+              this.tabNavigationDefinitions(),
+              this.layoutDefinitions(),
+              this.behaviorDefinitions(),
+              ...this.visibilityDefinitions(),
+              this.triggerDefinitions(),
+              this.appearanceDefinitions(),
+              this.itemDefinitions(),
+              this.dataDefinitions(),
+              this.aboutDefinitions(),
+            ];
+          ''',
+          '''    return [
+              this.tabNavigationDefinitions(),
+              this.appearanceDefinitions(),
+              this.layoutDefinitions(),
+              this.behaviorDefinitions(),
+              ...this.visibilityDefinitions(),
+              this.itemDefinitions(),
+              this.triggerDefinitions(),
+              this.dataDefinitions(),
+              this.aboutDefinitions(),
+            ];
+          ''', "definition order")
+          text = replace_once(text,
+          '''}
+
+          const SETTINGS_TABS = [
+          ''',
+          '''}
+
+          class ConfirmDeleteDockItemModal extends Modal {
+            constructor(
+              app: App,
+              private readonly itemLabel: string,
+              private readonly onConfirm: () => void,
+            ) {
+              super(app);
+            }
+
+            onOpen(): void {
+              this.setTitle("Delete dock item?");
+              this.contentEl.createEl("p", {
+                text: `Remove “${this.itemLabel}” from this Dock? This cannot be undone.`,
+              });
+              const actions = new Setting(this.contentEl);
+              actions.settingEl.addClass("ledge-delete-confirmation-actions");
+              actions.addButton((button) => button
+                .setButtonText("Cancel")
+                .onClick(() => this.close()));
+              actions.addButton((button) => button
+                .setButtonText("Delete item")
+                .setIcon("trash-2")
+                .setDestructive()
+                .onClick(() => {
+                  this.close();
+                  this.onConfirm();
+                }));
+            }
+          }
+
+          const SETTINGS_TABS = [
+          ''', "delete confirmation modal")
+          text = text.replace('''  private itemPage(item: DockItemSettings, index: number): SettingDefinitionPage {''', '''  protected itemPage(item: DockItemSettings, index: number): SettingDefinitionPage {''', 1)
+          text = text.replace('''  private itemPageName(item: DockItemSettings, index: number): string {''', '''  protected itemPageName(item: DockItemSettings, index: number): string {''', 1)
+          text = text.replace('''  private itemRowDescription(item: DockItemSettings): string {''', '''  protected itemRowDescription(item: DockItemSettings): string {''', 1)
+          text = text.replace('''  private targetExists(target: string): boolean {''', '''  protected targetExists(target: string): boolean {''', 1)
+          text = text.replace('''            setting, key("label"), "Books", "Dock item label", true,
+          ''', '''            setting, key("label"), "Books", "Dock item label", item.id,
+          ''', 1)
+          text = text.replace('''            setting, key("target"), "target", "Folder/Note.md", "Target path", true,
+          ''', '''            setting, key("target"), "target", "Folder/Note.md", "Target path", item.id,
+          ''', 1)
+          delete_block = '''        {
+              name: "Delete dock item",
+              desc: "Remove this shortcut from Ledge.",
+              render: (setting) => {
+                setting.addButton((button) =>
+                  button
+                    .setButtonText("Delete item")
+                    .setIcon("trash-2")
+                    .setDestructive()
+                    .onClick(() => this.deleteDockItem(item.id)),
+                );
+              },
+            },
+          '''
+          if delete_block not in text:
+              raise SystemExit("missing patch anchor: item page delete block")
+          text = text.replace(delete_block, "", 1)
+          text = replace_once(text,
+          '''  private renderCommittedTextControl(
+              setting: Setting,
+              key: string,
+              placeholder: string,
+              ariaLabel: string,
+              refreshAfterCommit = false,
+            ): () => void {
+          ''',
+          '''  private renderCommittedTextControl(
+              setting: Setting,
+              key: string,
+              placeholder: string,
+              ariaLabel: string,
+              refreshItemId?: string,
+            ): () => void {
+          ''', "committed text signature")
+          text = text.replace('''        if (refreshAfterCommit) this.update();
+          ''', '''        if (refreshItemId) this.refreshDockItemRows();
+          ''', 1)
+          text = replace_once(text,
+          '''  private renderFilePathControl(
+              setting: Setting,
+              key: string,
+              mode: "target" | "all" | "image",
+              placeholder: string,
+              ariaLabel: string,
+              refreshAfterCommit = false,
+            ): () => void {
+          ''',
+          '''  private renderFilePathControl(
+              setting: Setting,
+              key: string,
+              mode: "target" | "all" | "image",
+              placeholder: string,
+              ariaLabel: string,
+              refreshItemId?: string,
+            ): () => void {
+          ''', "file path signature")
+          text = text.replace('''        if (refreshAfterCommit) this.update();
+          ''', '''        if (refreshItemId) this.refreshDockItemRows();
+          ''', 1)
+          target_marker = '''  protected targetExists(target: string): boolean {
+          '''
+          target_insert = '''  protected refreshDockItemRows(): void {
+              const rows = Array.from(
+                this.containerEl.querySelectorAll<HTMLElement>("[data-ledge-item-id]"),
+              );
+              for (const [index, item] of this.ledge.settings.items.entries()) {
+                const row = rows.find((candidate) => candidate.dataset.ledgeItemId === item.id);
+                if (!row) continue;
+                const name = row.querySelector<HTMLElement>(".setting-item-name");
+                const description = row.querySelector<HTMLElement>(".setting-item-description");
+                const state = row.querySelector<HTMLElement>("[data-ledge-item-state]");
+                const warning = row.querySelector<HTMLElement>("[data-ledge-item-warning]");
+                if (name) name.textContent = this.itemPageName(item, index);
+                if (description) description.textContent = this.itemRowDescription(item);
+                if (state) state.textContent = item.enabled ? "Enabled" : "Hidden";
+                if (warning) warning.hidden = this.targetExists(item.target);
+              }
+            }
+
+            protected targetExists(target: string): boolean {
+          '''
+          text = replace_once(text, target_marker, target_insert, "item row summary refresh")
+          old_delete = '''  private deleteDockItem(id: string): void {
+              const items = this.ledge.settings.items.filter((item) => item.id !== id);
+              if (items.length === this.ledge.settings.items.length) return;
+              this.ledge.settings.items = items;
+              void this.ledge.saveSettings().then(() => this.update());
+            }
+          '''
+          new_delete = '''  protected deleteDockItem(id: string): void {
+              const item = this.ledge.settings.items.find((candidate) => candidate.id === id);
+              if (!item) return;
+              const label = item.label || item.target || "Untitled item";
+              new ConfirmDeleteDockItemModal(this.app, label, () => {
+                const items = this.ledge.settings.items.filter((candidate) => candidate.id !== id);
+                if (items.length === this.ledge.settings.items.length) return;
+                this.ledge.settings.items = items;
+                void this.ledge.saveSettings().then(() => this.update());
+              }).open();
+            }
+          '''
+          text = replace_once(text, old_delete, new_delete, "confirmed item deletion")
+          p.write_text(text)
+
+          # Actual settings tab: replace navigable pages with ID-stable inline accordions.
+          p = Path("src/icon-library-setting-tab.ts")
+          text = p.read_text()
+          text = replace_once(text,
+          '''const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
+            "items",
+            "layout",
+            "behavior",
+            "visibility",
+            "trigger",
+            "appearance",
+          ];
+          ''',
+          '''const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
+            "appearance",
+            "layout",
+            "behavior",
+            "visibility",
+            "items",
+            "trigger",
+          ];
+          ''', "dock section order")
+          text = text.replace('''  private activeDockSection: DockSettingsSection = "items";
+          ''', '''  private activeDockSection: DockSettingsSection = "appearance";
+          ''', 1)
+          text = replace_once(text,
+          '''  private activeDragHandle: HTMLButtonElement | null = null;
+          ''',
+          '''  private activeDragHandle: HTMLButtonElement | null = null;
+            private readonly expandedItemIds = new Set<string>();
+            private readonly itemDetailCleanups = new Map<string, Array<() => void>>();
+          ''', "accordion state")
+          text = replace_once(text,
+          '''  control?: {
+              type?: string;
+              key?: string;
+              options?: Record<string, string>;
+            };
+            render?: (setting: Setting) => void;
+            items?: SettingDefinitionItem[];
+          };
+          ''',
+          '''  control?: {
+              type?: string;
+              key?: string;
+              options?: Record<string, string>;
+              min?: number;
+              max?: number;
+              step?: number;
+              placeholder?: string;
+              displayFormat?: (value: number) => string;
+            };
+            visible?: () => boolean;
+            render?: (setting: Setting) => void | (() => void);
+            items?: SettingDefinitionItem[];
+          };
+          ''', "mutable definition controls")
+          text = text.replace('''    let itemDecoratorInserted = false;
+          ''', "", 1)
+          text = replace_once(text,
+          '''      if (section === "items" && !itemDecoratorInserted) {
+                definitions.push(this.itemRowDecoratorDefinition());
+                itemDecoratorInserted = true;
+              }
+              definitions.push(definition);
+          ''',
+          '''      if (section === "items") {
+                definitions.push(this.dockItemsAccordionDefinition());
+                continue;
+              }
+              definitions.push(definition);
+          ''', "replace item pages with accordion")
+          decorator_method = '''  private itemRowDecoratorDefinition(): SettingDefinitionItem {
+              return {
+                name: "Dock item reorder controls",
+                cls: "ledge-item-row-decorator",
+                searchable: false,
+                render: () => {
+                  this.scheduleItemRowControls();
+                  return () => this.clearItemDragState();
+                },
+              };
+            }
+
+          '''
+          if decorator_method not in text:
+              raise SystemExit("missing patch anchor: item decorator method")
+          text = text.replace(decorator_method, "", 1)
+          apply_marker = '''  private applyDockSectionVisibility(): void {
+          '''
+          accordion_methods = r'''  private dockItemsAccordionDefinition(): SettingDefinitionItem {
+              return {
+                type: "group",
+                heading: "Dock items",
+                cls: "ledge-settings-panel-items",
+                items: [
+                  {
+                    name: "Dock items",
+                    searchable: false,
+                    render: (setting) => {
+                      setting.settingEl.addClass("ledge-items-accordion-setting");
+                      setting.infoEl.setCssStyles({ display: "none" });
+                      setting.controlEl.replaceChildren();
+                      setting.controlEl.setCssStyles({ display: "block", width: "100%" });
+
+                      const container = setting.controlEl.createDiv({ cls: "ledge-items-accordion" });
+                      const cleanups: Array<() => void> = [];
+                      if (this.ledgePlugin.settings.items.length === 0) {
+                        container.createDiv({
+                          cls: "ledge-items-empty-state",
+                          text: "No dock items. Add one to create a shortcut.",
+                        });
+                      }
+
+                      for (const [index, item] of this.ledgePlugin.settings.items.entries()) {
+                        cleanups.push(this.renderDockItemAccordion(container, item.id, index));
+                      }
+
+                      const addRow = new Setting(container)
+                        .setName("Add dock item")
+                        .setDesc("Create a new shortcut and open its settings.");
+                      addRow.settingEl.addClass("ledge-add-item-row");
+                      addRow.addButton((button) => button
+                        .setIcon("plus")
+                        .setButtonText("Add item")
+                        .onClick(() => {
+                          const item = this.createAccordionDockItem();
+                          if (!item) return;
+                          this.expandedItemIds.add(item.id);
+                          void this.ledgePlugin.saveSettings().then(() => this.update());
+                        }));
+
+                      this.scheduleItemRowControls();
+                      return () => {
+                        for (const cleanup of cleanups) cleanup();
+                        this.clearAllItemDetailCleanups();
+                        this.clearItemDragState();
+                      };
+                    },
+                  },
+                ],
+              };
+            }
+
+            private createAccordionDockItem() {
+              const existing = this.ledgePlugin.settings.items;
+              const usedIds = new Set(existing.map((item) => item.id));
+              let id = `item-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+              while (usedIds.has(id)) id = `${id}-new`;
+              const item = {
+                id,
+                enabled: true,
+                label: "New item",
+                target: "",
+                iconSource: "lucide" as const,
+                icon: "circle",
+                builtInIcon: "circle",
+                vaultIconPath: "",
+                iconRenderMode: "tint" as const,
+                iconSize: 0,
+                iconColor: "",
+                tileGradientStart: "",
+                tileGradientEnd: "",
+              };
+              existing.push(item);
+              return item;
+            }
+
+            private renderDockItemAccordion(
+              container: HTMLElement,
+              itemId: string,
+              index: number,
+            ): () => void {
+              const item = this.ledgePlugin.settings.items.find((candidate) => candidate.id === itemId);
+              if (!item) return () => undefined;
+
+              const wrapper = container.createDiv({ cls: "ledge-settings-item ledge-item-accordion" });
+              const header = new Setting(wrapper)
+                .setName(this.itemRowName(itemId, index))
+                .setDesc(item.target || "No target path");
+              header.settingEl.addClasses(["ledge-settings-item-header", "mod-navigable", "tappable"]);
+              header.settingEl.dataset.ledgeItemId = itemId;
+
+              header.controlEl.createSpan({
+                cls: "ledge-item-row-state",
+                text: item.enabled ? "Enabled" : "Hidden",
+                attr: { "data-ledge-item-state": "true" },
+              });
+              const warning = header.controlEl.createSpan({
+                cls: "ledge-item-row-warning",
+                attr: {
+                  "data-ledge-item-warning": "true",
+                  "aria-label": "Target path is missing",
+                  title: "Target path is missing",
+                },
+              });
+              setIcon(warning, "triangle-alert");
+              warning.hidden = this.targetExists(item.target);
+
+              const toggleButton = header.controlEl.createEl("button", {
+                cls: "clickable-icon ledge-item-accordion-toggle",
+                attr: { type: "button", "aria-label": "Toggle dock item settings" },
+              });
+              const details = wrapper.createDiv({ cls: "ledge-item-accordion-details" });
+
+              const setExpanded = (expanded: boolean): void => {
+                wrapper.classList.toggle("is-expanded", expanded);
+                details.hidden = !expanded;
+                toggleButton.setAttribute("aria-expanded", String(expanded));
+                setIcon(toggleButton, expanded ? "chevron-down" : "chevron-right");
+                if (expanded) {
+                  this.expandedItemIds.add(itemId);
+                  this.renderDockItemDetails(details, itemId);
+                } else {
+                  this.expandedItemIds.delete(itemId);
+                  this.clearItemDetail(itemId);
+                  details.replaceChildren();
+                }
+              };
+              const toggle = (): void => setExpanded(!this.expandedItemIds.has(itemId));
+              const onToggleClick = (event: MouseEvent): void => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggle();
+              };
+              const onHeaderClick = (event: MouseEvent): void => {
+                const target = event.target as HTMLElement | null;
+                if (target?.closest("button, input, select, textarea, a, .clickable-icon")) return;
+                toggle();
+              };
+              toggleButton.addEventListener("click", onToggleClick);
+              header.settingEl.addEventListener("click", onHeaderClick);
+              setExpanded(this.expandedItemIds.has(itemId));
+
+              return () => {
+                toggleButton.removeEventListener("click", onToggleClick);
+                header.settingEl.removeEventListener("click", onHeaderClick);
+                this.clearItemDetail(itemId);
+              };
+            }
+
+            private renderDockItemDetails(details: HTMLElement, itemId: string): void {
+              const index = this.ledgePlugin.settings.items.findIndex((item) => item.id === itemId);
+              const item = this.ledgePlugin.settings.items[index];
+              if (!item) return;
+              this.clearItemDetail(itemId);
+              details.replaceChildren();
+
+              const page = this.itemPage(item, index) as unknown as MutableSettingDefinition;
+              const definitions = Array.isArray(page.items) ? [...page.items] : [];
+              this.decorateControls(definitions);
+              const cleanups: Array<() => void> = [];
+              for (const definition of definitions) {
+                const cleanup = this.renderDockItemSettingDefinition(details, definition, itemId);
+                if (cleanup) cleanups.push(cleanup);
+              }
+              this.itemDetailCleanups.set(itemId, cleanups);
+            }
+
+            private renderDockItemSettingDefinition(
+              container: HTMLElement,
+              definition: SettingDefinitionItem,
+              itemId: string,
+            ): (() => void) | null {
+              const mutable = definition as unknown as MutableSettingDefinition;
+              if (mutable.visible && !mutable.visible()) return null;
+
+              const setting = new Setting(container);
+              if (mutable.name) setting.setName(mutable.name);
+              if (mutable.desc) setting.setDesc(mutable.desc);
+              if (mutable.cls) {
+                for (const cls of mutable.cls.split(/\s+/).filter(Boolean)) setting.settingEl.addClass(cls);
+              }
+              if (mutable.render) return mutable.render(setting) ?? null;
+
+              const control = mutable.control;
+              const key = control?.key;
+              if (!control?.type || !key) return null;
+              const value = this.getControlValue(key);
+              const commit = (nextValue: unknown): void => {
+                void this.setControlValue(key, nextValue).then(() => {
+                  if (key.endsWith(":enabled")) this.refreshDockItemRows();
+                  if (key.endsWith(":iconColorEnabled") || key.endsWith(":tileGradientEnabled")) {
+                    this.renderDockItemDetails(container, itemId);
+                  }
+                });
+              };
+
+              if (control.type === "toggle") {
+                setting.addToggle((toggle) => toggle
+                  .setValue(value === true)
+                  .onChange(commit));
+              } else if (control.type === "dropdown") {
+                setting.addDropdown((dropdown) => {
+                  if (control.options) dropdown.addOptions(control.options);
+                  dropdown.setValue(typeof value === "string" ? value : "");
+                  dropdown.onChange(commit);
+                });
+              } else if (control.type === "text") {
+                setting.addText((input) => input
+                  .setPlaceholder(control.placeholder || "")
+                  .setValue(typeof value === "string" ? value : "")
+                  .onChange(commit));
+              } else if (control.type === "slider") {
+                const minimum = control.min ?? 0;
+                const maximum = control.max ?? 100;
+                const step = control.step ?? 1;
+                const numericValue = typeof value === "number" ? value : Number(value);
+                setting.addSlider((slider) => slider
+                  .setLimits(minimum, maximum, step)
+                  .setValue(Number.isFinite(numericValue) ? numericValue : minimum)
+                  .setDynamicTooltip()
+                  .onChange(commit));
+              } else if (control.type === "color") {
+                setting.addColorPicker((picker) => picker
+                  .setValue(typeof value === "string" && value ? value : "#000000")
+                  .onChange(commit));
+              }
+              return null;
+            }
+
+            private clearItemDetail(itemId: string): void {
+              const cleanups = this.itemDetailCleanups.get(itemId);
+              if (!cleanups) return;
+              this.itemDetailCleanups.delete(itemId);
+              for (const cleanup of cleanups) cleanup();
+            }
+
+            private clearAllItemDetailCleanups(): void {
+              for (const itemId of [...this.itemDetailCleanups.keys()]) this.clearItemDetail(itemId);
+            }
+
+            private applyDockSectionVisibility(): void {
+          '''
+          text = replace_once(text, apply_marker, accordion_methods, "accordion implementation")
+          # Add confirmation-backed delete button to the same header control strip, after move down.
+          down_block = '''      downButton.addEventListener("click", (event: MouseEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.moveDockItem(itemId, 1);
+              });
+
+              const navigationControl = controlEl.lastElementChild;
+          '''
+          down_replacement = '''      downButton.addEventListener("click", (event: MouseEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.moveDockItem(itemId, 1);
+              });
+
+              const deleteButton = controls.createEl("button", {
+                cls: "clickable-icon ledge-item-delete-button",
+                attr: {
+                  type: "button",
+                  "aria-label": "Delete dock item",
+                  title: "Delete dock item",
+                },
+              });
+              setIcon(deleteButton, "trash-2");
+              deleteButton.addEventListener("pointerdown", (event: PointerEvent) => event.stopPropagation());
+              deleteButton.addEventListener("click", (event: MouseEvent) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.deleteDockItem(itemId);
+              });
+
+              const navigationControl = controlEl.lastElementChild;
+          '''
+          text = replace_once(text, down_block, down_replacement, "row delete control")
+          p.write_text(text)
+
+          # Accordion styling.
+          p = Path("styles.css")
+          text = p.read_text()
+          style_marker = '''.ledge-settings-panel-items {
+            display: grid;
+            gap: var(--size-4-4);
+            margin: var(--size-4-3) 0 var(--size-4-6);
+          }
+          '''
+          style_replacement = '''.ledge-settings-panel-items {
+            display: grid;
+            gap: var(--size-4-4);
+            margin: var(--size-4-3) 0 var(--size-4-6);
+          }
+
+          .ledge-items-accordion-setting {
+            display: block;
+            padding: 0;
+            border: 0;
+          }
+
+          .ledge-items-accordion-setting > .setting-item-control {
+            width: 100%;
+            display: block;
+          }
+
+          .ledge-items-accordion {
+            width: 100%;
+            display: grid;
+            gap: var(--size-4-2);
+          }
+
+          .ledge-item-accordion {
+            padding: 0;
+            overflow: hidden;
+          }
+
+          .ledge-item-accordion > .setting-item {
+            padding: var(--size-4-3) var(--size-4-3);
+            border: 0;
+            cursor: pointer;
+          }
+
+          .ledge-item-accordion:not(.is-expanded) > .ledge-settings-item-header {
+            border-bottom-color: transparent;
+          }
+
+          .ledge-item-accordion-details {
+            padding: 0 var(--size-4-3) var(--size-4-2);
+          }
+
+          .ledge-item-accordion-details[hidden] {
+            display: none;
+          }
+
+          .ledge-item-accordion-details > .setting-item {
+            padding-right: var(--size-4-1);
+          }
+
+          .ledge-item-row-state {
+            min-width: max-content;
+            color: var(--text-muted);
+            font-size: var(--font-ui-smaller);
+          }
+
+          .ledge-item-row-warning,
+          .ledge-item-row-warning > svg {
+            width: var(--icon-s);
+            height: var(--icon-s);
+            color: var(--text-warning);
+          }
+
+          .ledge-item-accordion-toggle {
+            flex: 0 0 auto;
+          }
+
+          .ledge-item-delete-button {
+            color: var(--text-error);
+          }
+
+          .ledge-items-empty-state {
+            padding: var(--size-4-4);
+            border: 1px dashed var(--background-modifier-border);
+            border-radius: var(--radius-m);
+            color: var(--text-muted);
+            text-align: center;
+          }
+
+          .ledge-add-item-row {
+            margin-top: var(--size-4-2);
+          }
+
+          .ledge-delete-confirmation-actions .setting-item-info {
+            display: none;
+          }
+          '''
+          text = replace_once(text, style_marker, style_replacement, "accordion styles")
+          p.write_text(text)
+
+          # Regression checks.
+          p = Path("tests/manifest.test.ts")
+          text = p.read_text()
+          old_test = '''void test("Dock item pages expose a visible delete control and runtime work is event driven", () => {
+            const settings = fs.readFileSync("src/settings-tab.ts", "utf8");
+            const dock = fs.readFileSync("src/dock.ts", "utf8");
+
+            assert.match(settings, /name: "Delete dock item"/);
+            assert.match(settings, /\\.setDestructive\\(\\)/);
+            assert.match(settings, /heading: "Backup & transfer"/);
+            assert.doesNotMatch(dock, /setInterval\\(|MutationObserver/);
+          });
+          '''
+          new_test = '''void test("Dock items use inline accordion controls and workspace geometry is observed", () => {
+            const settings = fs.readFileSync("src/settings-tab.ts", "utf8");
+            const iconSettings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+            const dock = fs.readFileSync("src/dock.ts", "utf8");
+
+            assert.match(settings, /class ConfirmDeleteDockItemModal extends Modal/);
+            assert.match(settings, /\\.setDestructive\\(\\)/);
+            assert.doesNotMatch(settings, /name: "Delete dock item"/);
+            assert.match(iconSettings, /private readonly expandedItemIds = new Set<string>\\(\\)/);
+            assert.match(iconSettings, /ledge-item-accordion-toggle/);
+            assert.match(iconSettings, /ledge-item-delete-button/);
+            assert.match(iconSettings, /"appearance",[\\s\\S]*"layout",[\\s\\S]*"behavior",[\\s\\S]*"visibility",[\\s\\S]*"items",[\\s\\S]*"trigger"/);
+            assert.match(dock, /this\\.workspaceHost\\(\\) \\?\\? this\\.document\\.body/);
+            assert.match(dock, /ResizeObserver/);
+            assert.match(dock, /this\\.activeWorkspaceContent\\(leaf, leafContainer\\)/);
+            assert.match(settings, /heading: "Backup & transfer"/);
+            assert.doesNotMatch(dock, /setInterval\\(|MutationObserver/);
+          });
+          '''
+          text = replace_once(text, old_test, new_test, "manifest regression test")
+          p.write_text(text)
+
+          # Changelog.
+          p = Path("CHANGELOG.md")
+          text = p.read_text()
+          marker = "## Unreleased\n\n"
+          additions = (
+              "## Unreleased\n\n"
+              "- Keep every Dock and trigger anchored to the active workspace content, mount Dock roots inside the central workspace, and observe live workspace geometry so collapsing or reopening sidebars repositions them immediately.\n"
+              "- Replace Dock item sub-pages with inline expandable accordions, move delete controls onto item rows with confirmation, and keep Label/Target commits from rebuilding navigation or jumping to another item.\n"
+              "- Reorder Dock settings sections to Appearance → Layout → Behavior → Visibility → Items → Trigger.\n\n"
+          )
+          text = replace_once(text, marker, additions, "changelog")
+          p.write_text(text)
+          PY
+      - name: Validate
+        run: |
+          npm run check
+          git diff --check
+      - name: Commit implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Lunarch"
+          git config user.email "phantanlocct@outlook.com"
+          git add src/dock.ts src/settings-tab.ts src/icon-library-setting-tab.ts styles.css tests/manifest.test.ts CHANGELOG.md main.js
+          git commit -m "Keep Ledge inside workspace and simplify Dock items"
+          git push origin prerelease
+      - name: Remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/one-shot-workspace-items-ux.yml
+          git commit -m "Remove temporary workspace item UX workflow"
+          git push origin prerelease
