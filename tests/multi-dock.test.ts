@@ -37,14 +37,15 @@ void test("Dock preset menu is a simple button row with the add button last", ()
   assert.match(source, /for \(const dock of this\.ledgePlugin\.settings\.docks\)/);
   assert.match(source, /\.setButtonText\(dock\.name\)/);
   assert.match(source, /button\.buttonEl\.dataset\.dockPresetId = dock\.id/);
-  assert.match(source, /\.setIcon\("plus"\)[\s\S]*\.setTooltip\("Add Dock preset"\)/);
+  assert.match(source, /\.setIcon\("plus"\)[\s\S]*\.setTooltip\("Add dock preset"\)/);
   assert.doesNotMatch(source, /dockPresetDefinition\(|ledge-dock-preset-body|chevron-down|chevron-right/);
 });
 
-void test("Dock section tabs are centered without the tabs wrapper box", () => {
+void test("Dock section tabs are centered and follow the requested order", () => {
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
-  assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);
+  assert.match(source, /private activeDockSection: DockSettingsSection = "appearance"/);
+  assert.match(source, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"items",[\s\S]*"trigger"/);
   assert.match(source, /dockSectionNavigationDefinition/);
   assert.match(source, /cls: "ledge-dock-section-tabs"/);
   assert.match(source, /tabList\.setCssStyles\(\{ display: "contents" \}\)/);
@@ -67,15 +68,16 @@ void test("About stays at the bottom and uses manifest metadata", () => {
   assert.match(source, /name: "Author"[\s\S]*this\.ledgePlugin\.manifest\.author/);
 });
 
-void test("top edge and top corners anchor to the active note content area", () => {
+void test("all Dock positions anchor to the active workspace content area", () => {
   const source = fs.readFileSync("src/dock.ts", "utf8");
 
-  assert.match(source, /anchorRectForPosition/);
-  assert.match(source, /position === "top-left"/);
-  assert.match(source, /position === "top-right"/);
+  assert.match(source, /private activeWorkspaceContent/);
   assert.match(source, /contentEl\?: HTMLElement/);
   assert.match(source, /querySelector<HTMLElement>\("\.view-content"\)/);
+  assert.match(source, /const viewContent = this\.activeWorkspaceContent\(leaf, leafContainer\)/);
+  assert.match(source, /private anchorRectForPosition\([\s\S]*_position: DockPosition/);
   assert.match(source, /this\.positionTrigger\(rect, position/);
+  assert.match(source, /ResizeObserver/);
 });
 
 void test("corner triggers render as perpendicular pill arms instead of a square", () => {
@@ -220,24 +222,23 @@ void test("prerelease item settings expose pointer-captured drag and arrow reord
   assert.doesNotMatch(enhanced, /dragstart|dragover|dropEffect|dataTransfer|draggable = true/);
   assert.match(enhanced, /"aria-label": "Move dock item up"/);
   assert.match(enhanced, /"aria-label": "Move dock item down"/);
+  assert.match(enhanced, /ledge-item-delete-button/);
+  assert.match(enhanced, /querySelector<HTMLElement>\("\.ledge-item-accordion-toggle"\)/);
   assert.match(styles, /\.ledge-item-row-decorator/);
   assert.match(styles, /\.ledge-item-drag-handle \{[\s\S]*touch-action: none;/);
   assert.match(main, /async saveSettings\(refresh = true, syncIcons = false\)/);
 });
 
-
-void test("item and visibility page identities refresh only after committed text edits", () => {
-  const source = fs.readFileSync("src/settings-tab.ts", "utf8");
+void test("accordion item identity stays stable while editing label and target", () => {
+  const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
   const enhanced = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
-  assert.match(source, /name: "Label"[\s\S]*renderCommittedTextControl[\s\S]*"Dock item label"[\s\S]*true/);
-  assert.match(source, /"Visibility rule value"[\s\S]*true/);
-  assert.match(source, /if \(event\.key === "Enter"\) commit\(\)/);
-  assert.match(source, /inputEl\.addEventListener\("blur", commit\)/);
-  assert.match(enhanced, /item\.iconSource !== "vault"/);
-  assert.doesNotMatch(enhanced, /\.onChange\(\(value\) => \{\s*void this\.setControlValue\(key, value\)/);
+  assert.match(accordion, /expandedItemIds: Set<string>/);
+  assert.match(accordion, /await host\.setControlValue\(key\("label"\), value\);[\s\S]*refreshHeaders\(\)/);
+  assert.match(accordion, /await host\.setControlValue\(key\("target"\), value\);[\s\S]*refreshHeaders\(\)/);
+  assert.match(accordion, /setExpanded\(!host\.expandedItemIds\.has\(item\.id\)\)/);
+  assert.match(enhanced, /private readonly expandedItemIds = new Set<string>\(\)/);
 });
-
 
 void test("item row descriptions stay plain text across reorder refreshes", () => {
   const base = fs.readFileSync("src/settings-tab.ts", "utf8");
