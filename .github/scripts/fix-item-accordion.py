@@ -58,11 +58,68 @@ if header not in text:
 text = text.replace(header, header + "\n" + collapsed.rstrip() + "\n", 1)
 p.write_text(text)
 
-# Clean up the three existing sentence-case tooltip warnings while this settings
-# surface is already being touched.
+# Clean up sentence-case tooltip warnings and make the requested header order
+# deterministic: state/warning, reorder controls (including delete), then chevron.
 p = Path("src/icon-library-setting-tab.ts")
 text = p.read_text()
 text = text.replace('.setTooltip("Add Dock preset")', '.setTooltip("Add dock preset")', 1)
 text = text.replace('.setTooltip("Duplicate Dock")', '.setTooltip("Duplicate dock")', 1)
 text = text.replace('.setTooltip("Delete Dock")', '.setTooltip("Delete dock")', 1)
+old = '''      const navigationControl = controlEl.lastElementChild;
+      if (navigationControl && navigationControl !== controls) {
+        controlEl.insertBefore(controls, navigationControl);
+      }'''
+new = '''      const navigationControl = controlEl.querySelector<HTMLElement>(".ledge-item-accordion-toggle");
+      if (navigationControl) controlEl.insertBefore(controls, navigationControl);'''
+if old not in text:
+    raise SystemExit("item control ordering patch anchor missing")
+text = text.replace(old, new, 1)
+p.write_text(text)
+
+# Update source-level regression tests that intentionally described the old UI
+# and old position-specific anchoring semantics.
+p = Path("tests/multi-dock.test.ts")
+text = p.read_text()
+old = r'''  assert.match(source, /\.setIcon\("plus"\)[\s\S]*\.setTooltip\("Add Dock preset"\)/);'''
+new = r'''  assert.match(source, /\.setIcon\("plus"\)[\s\S]*\.setTooltip\("Add dock preset"\)/);'''
+if old not in text:
+    raise SystemExit("stale add-dock tooltip test anchor missing")
+text = text.replace(old, new, 1)
+old = r'''  assert.match(source, /private activeDockSection: DockSettingsSection = "items"/);'''
+new = r'''  assert.match(source, /private activeDockSection: DockSettingsSection = "appearance"/);'''
+if old not in text:
+    raise SystemExit("stale active section test anchor missing")
+text = text.replace(old, new, 1)
+old = '''void test("top edge and top corners anchor to the active note content area", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(source, /anchorRectForPosition/);
+  assert.match(source, /position === "top-left"/);
+  assert.match(source, /position === "top-right"/);
+  assert.match(source, /contentEl\\?: HTMLElement/);
+  assert.match(source, /querySelector<HTMLElement>\\("\\.view-content"\\)/);
+  assert.match(source, /this\\.positionTrigger\\(rect, position/);
+});'''
+new = '''void test("all Dock positions anchor to the active workspace content area", () => {
+  const source = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(source, /private activeWorkspaceContent/);
+  assert.match(source, /contentEl\\?: HTMLElement/);
+  assert.match(source, /querySelector<HTMLElement>\\("\\.view-content"\\)/);
+  assert.match(source, /const viewContent = this\\.activeWorkspaceContent\\(leaf, leafContainer\\)/);
+  assert.match(source, /private anchorRectForPosition\\([\\s\\S]*_position: DockPosition/);
+  assert.match(source, /this\\.positionTrigger\\(rect, position/);
+  assert.match(source, /ResizeObserver/);
+});'''
+if old not in text:
+    raise SystemExit("stale workspace anchor test block missing")
+text = text.replace(old, new, 1)
+
+# Guard the exact requested item-header control ordering in future changes.
+needle = '''  assert.match(source, /gap: "var\\(--size-4-1\\)"/);'''
+extra = '''  assert.match(source, /gap: "var\\(--size-4-1\\)"/);
+  assert.match(source, /querySelector<HTMLElement>\\("\\.ledge-item-accordion-toggle"\\)/);'''
+if needle not in text:
+    raise SystemExit("item header ordering test insertion anchor missing")
+text = text.replace(needle, extra, 1)
 p.write_text(text)
