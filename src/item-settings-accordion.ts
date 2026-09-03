@@ -294,7 +294,7 @@ function renderItemDetails(
       inputEl.setAttribute("aria-label", "Icon ID");
       inputEl.addEventListener("blur", commit);
       inputEl.addEventListener("keydown", onKeyDown);
-      setValue = (value) => text.setValue(value);
+      setValue = (value) => { text.setValue(value); };
     });
     icon.addButton((button) => button
       .setButtonText("Browse icons")
@@ -314,7 +314,7 @@ function renderItemDetails(
   } else {
     const iconPath = new Setting(details)
       .setName("Icon path")
-      .setDesc("Choose a PNG, JPEG, WebP, GIF, or SVG file stored in the vault.");
+      .setDesc("Choose a PNG, JPEG, webp, GIF, or SVG file stored in the vault.");
     cleanups.push(renderCommittedFilePath(
       iconPath,
       host,
@@ -337,7 +337,6 @@ function renderItemDetails(
   iconSize.addSlider((slider) => slider
     .setLimits(0, 96, 1)
     .setValue(item.iconSize)
-    .setDynamicTooltip()
     .onChange((value) => { void host.setControlValue(key("iconSize"), value); }));
 
   const iconColorToggle = new Setting(details)

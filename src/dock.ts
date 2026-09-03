@@ -264,6 +264,8 @@ class DockInstance extends Component {
   private visible = false;
   private previousAutoHide: boolean | null = null;
   private renderVersion = 0;
+  private geometryObserver: ResizeObserver | null = null;
+  private observedGeometryElements: Element[] = [];
 
   constructor(
     private readonly controller: DockController,
@@ -275,6 +277,7 @@ class DockInstance extends Component {
   onload(): void {
     this.root = this.document.body.createDiv({ cls: "ledge-dock-root" });
     this.root.dataset.ledgeDockRoot = "true";
+    (this.workspaceHost() ?? this.document.body).appendChild(this.root);
 
     this.trigger = this.root.createEl("button", { cls: "ledge-dock-trigger" });
     this.trigger.type = "button";
@@ -288,8 +291,12 @@ class DockInstance extends Component {
     this.bindDockInteraction();
     const view = this.document.defaultView;
     if (view) this.registerDomEvent(view, "resize", () => this.refreshGeometryAndActiveState());
+    this.bindGeometryObserver();
     this.register(() => {
       this.clearTimers();
+      this.geometryObserver?.disconnect();
+      this.geometryObserver = null;
+      this.observedGeometryElements = [];
       this.root.remove();
     });
 
@@ -341,6 +348,8 @@ class DockInstance extends Component {
   refreshGeometryAndActiveState(): void {
     if (!this.isMounted() || !this.syncVisibility()) return;
     if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
+    this.ensureWorkspaceHost();
+    this.bindGeometryObserver();
     this.positionAgainstRootPane();
     this.markActiveTarget();
   }
@@ -529,6 +538,52 @@ class DockInstance extends Component {
     });
   }
 
+  private workspaceHost(): HTMLElement | null {
+    const leaf = this.controller.leafForDocument(this.document);
+    const leafContainer = leaf?.view?.containerEl;
+    return leafContainer?.closest<HTMLElement>(".workspace-split.mod-root")
+      ?? this.document.querySelector<HTMLElement>(".workspace-split.mod-root")
+      ?? this.document.querySelector<HTMLElement>(".workspace");
+  }
+
+  private activeWorkspaceContent(
+    leaf: WorkspaceLeaf | null,
+    leafContainer: HTMLElement | undefined,
+  ): HTMLElement | null {
+    return (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
+      ?? leafContainer?.querySelector<HTMLElement>(".view-content")
+      ?? leafContainer
+      ?? null;
+  }
+
+  private ensureWorkspaceHost(): void {
+    const host = this.workspaceHost();
+    if (host && this.root.parentElement !== host) host.appendChild(this.root);
+  }
+
+  private bindGeometryObserver(): void {
+    const ResizeObserverCtor = this.document.defaultView?.ResizeObserver;
+    if (!ResizeObserverCtor) return;
+
+    const host = this.workspaceHost();
+    const leaf = this.controller.leafForDocument(this.document);
+    const leafContainer = leaf?.view?.containerEl;
+    const content = this.activeWorkspaceContent(leaf, leafContainer);
+    const candidates = [host, content].filter((element): element is HTMLElement => Boolean(element));
+    const elements = candidates.filter((element, index) => candidates.indexOf(element) === index);
+    const unchanged = elements.length === this.observedGeometryElements.length
+      && elements.every((element, index) => element === this.observedGeometryElements[index]);
+    if (unchanged) return;
+
+    if (!this.geometryObserver) {
+      this.geometryObserver = new ResizeObserverCtor(() => this.refreshGeometryAndActiveState());
+    } else {
+      this.geometryObserver.disconnect();
+    }
+    this.observedGeometryElements = elements;
+    for (const element of elements) this.geometryObserver.observe(element);
+  }
+
   private positionAgainstRootPane(): void {
     const settings = this.controller.settings();
     const leaf = this.controller.leafForDocument(this.document);
@@ -581,20 +636,12 @@ class DockInstance extends Component {
   }
 
   private anchorRectForPosition(
-    position: DockPosition,
+    _position: DockPosition,
     leaf: WorkspaceLeaf | null,
     leafContainer: HTMLElement | undefined,
     fallbackRect: DOMRect,
   ): DOMRect {
-    const usesActiveViewAnchor = position === "top"
-      || position === "bottom"
-      || position === "top-left"
-      || position === "top-right";
-    if (!usesActiveViewAnchor) return fallbackRect;
-
-    const viewContent = (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
-      ?? leafContainer?.querySelector<HTMLElement>(".view-content")
-      ?? leafContainer;
+    const viewContent = this.activeWorkspaceContent(leaf, leafContainer);
     const contentRect = viewContent?.getBoundingClientRect();
     if (!contentRect || contentRect.width <= 0 || contentRect.height <= 0) return fallbackRect;
     return contentRect;

@@ -693,6 +693,72 @@
   margin: var(--size-4-3) 0 var(--size-4-6);
 }
 
+.ledge-items-accordion-setting {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+
+.ledge-items-accordion-setting > .setting-item-control {
+  width: 100%;
+  display: block;
+}
+
+.ledge-items-accordion {
+  width: 100%;
+  display: grid;
+  gap: var(--size-4-2);
+}
+
+.ledge-item-accordion {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ledge-item-accordion > .setting-item {
+  padding: var(--size-4-3);
+  border: 0;
+  cursor: pointer;
+}
+
+.ledge-item-accordion-details {
+  padding: 0 var(--size-4-3) var(--size-4-2);
+}
+
+.ledge-item-accordion-details[hidden] {
+  display: none;
+}
+
+.ledge-item-row-state {
+  min-width: max-content;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.ledge-item-row-warning,
+.ledge-item-row-warning > svg {
+  width: var(--icon-s);
+  height: var(--icon-s);
+  color: var(--text-warning);
+}
+
+.ledge-item-delete-button {
+  color: var(--text-error);
+}
+
+.ledge-items-empty-state {
+  padding: var(--size-4-4);
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ledge-delete-confirmation-actions .setting-item-info {
+  display: none;
+}
+
+
 .ledge-settings-item {
   padding: var(--size-4-2) var(--size-4-4);
   border: 1px solid var(--background-modifier-border);
@@ -702,6 +768,10 @@
 
 .ledge-settings-item-header {
   border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ledge-item-accordion:not(.is-expanded) > .ledge-settings-item-header {
+  border-bottom-color: transparent;
 }
 
 .ledge-settings-panel-items .setting-item {

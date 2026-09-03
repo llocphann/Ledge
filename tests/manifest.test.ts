@@ -120,3 +120,18 @@ void test("corner trigger pills use perpendicular rounded arms", () => {
     /\[data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?height: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
   );
 });
+
+
+void test("workspace anchoring and Dock item accordion stay regression-covered", () => {
+  const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const settings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
+
+  assert.match(dock, /workspaceHost\(\)/);
+  assert.match(dock, /ResizeObserver/);
+  assert.match(dock, /activeWorkspaceContent/);
+  assert.match(settings, /ledge-item-delete-button/);
+  assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"items",[\s\S]*"trigger"/);
+  assert.match(accordion, /ConfirmDockItemDeleteModal extends Modal/);
+  assert.match(accordion, /ledge-item-accordion-toggle/);
+});

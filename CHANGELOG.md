@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Keep every Dock and trigger anchored to the active workspace content and observe live workspace geometry so collapsing or reopening sidebars repositions them immediately.
+- Replace Dock item sub-pages with inline expandable accordions, move delete controls onto item rows with confirmation, and keep item identity stable while editing labels.
+- Reorder Dock settings sections to Appearance → Layout → Behavior → Visibility → Items → Trigger.
+
 ## 2.1.0
 
 - Remove vault-specific default item paths and the remaining personal folder placeholder from the distributed build; fresh installs now start with an empty Dock item list.

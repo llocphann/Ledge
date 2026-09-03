@@ -7,6 +7,11 @@ import {
   type SettingGroupItem,
 } from "obsidian";
 import { openIconPicker } from "./icon-picker";
+import {
+  confirmDeleteDockItem,
+  renderDockItemsAccordion,
+  type DockItemsAccordionHost,
+} from "./item-settings-accordion";
 import type LedgePlugin from "./main";
 import { availableDockPositions, MAX_DOCK_PRESETS } from "./settings";
 import { LedgeSettingTab } from "./settings-tab";
@@ -32,12 +37,12 @@ type DockSettingsSection =
   | "appearance";
 
 const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
-  "items",
+  "appearance",
   "layout",
   "behavior",
   "visibility",
+  "items",
   "trigger",
-  "appearance",
 ];
 
 const SECTION_LABELS: Record<DockSettingsSection, string> = {
@@ -81,12 +86,13 @@ type MutableSettingDefinition = {
  * so every section below edits that preset without duplicating controls.
  */
 export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
-  private activeDockSection: DockSettingsSection = "items";
+  private activeDockSection: DockSettingsSection = "appearance";
   private draggedItemId: string | null = null;
   private dragPointerId: number | null = null;
   private dragTargetItemId: string | null = null;
   private dragDropAfter = false;
   private activeDragHandle: HTMLButtonElement | null = null;
+  private readonly expandedItemIds = new Set<string>();
 
   constructor(
     app: App,
@@ -130,6 +136,10 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
       if (section === "items" && !itemDecoratorInserted) {
         definitions.push(this.itemRowDecoratorDefinition());
         itemDecoratorInserted = true;
+      }
+      if (section === "items") {
+        definitions.push(this.dockItemsAccordionDefinition());
+        continue;
       }
       definitions.push(definition);
     }
@@ -180,6 +190,37 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         this.scheduleItemRowControls();
         return () => this.clearItemDragState();
       },
+    };
+  }
+
+  private itemAccordionHost(): DockItemsAccordionHost {
+    return {
+      app: this.app,
+      plugin: this.ledgePlugin,
+      expandedItemIds: this.expandedItemIds,
+      getControlValue: (key) => this.getControlValue(key),
+      setControlValue: (key, value) => this.setControlValue(key, value),
+      update: () => this.update(),
+    };
+  }
+
+  private dockItemsAccordionDefinition(): SettingDefinitionItem {
+    return {
+      type: "group",
+      heading: "Dock items",
+      cls: "ledge-settings-panel-items",
+      items: [{
+        name: "Dock items",
+        searchable: false,
+        render: (setting) => {
+          const cleanup = renderDockItemsAccordion(setting, this.itemAccordionHost());
+          this.scheduleItemRowControls();
+          return () => {
+            cleanup();
+            this.clearItemDragState();
+          };
+        },
+      }],
     };
   }
 
@@ -273,7 +314,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         setting.addButton((button) => {
           button
             .setIcon("plus")
-            .setTooltip("Add Dock preset")
+            .setTooltip("Add dock preset")
             .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
             .onClick(() => {
               void this.ledgePlugin.createDockPreset(false).then((created) => {
@@ -321,7 +362,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         setting.addButton((button) => {
           button
             .setIcon("copy")
-            .setTooltip("Duplicate Dock")
+            .setTooltip("Duplicate dock")
             .setDisabled(this.ledgePlugin.settings.docks.length >= MAX_DOCK_PRESETS)
             .onClick(() => this.duplicateDock(dockId));
         });
@@ -329,7 +370,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         setting.addButton((button) => {
           button
             .setIcon("trash-2")
-            .setTooltip("Delete Dock")
+            .setTooltip("Delete dock")
             .setDisabled(this.ledgePlugin.settings.docks.length <= 1)
             .setDestructive()
             .onClick(() => this.deleteDock(dockId));
@@ -557,10 +598,20 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         this.moveDockItem(itemId, 1);
       });
 
-      const navigationControl = controlEl.lastElementChild;
-      if (navigationControl && navigationControl !== controls) {
-        controlEl.insertBefore(controls, navigationControl);
-      }
+      const deleteButton = controls.createEl("button", {
+        cls: "clickable-icon ledge-item-delete-button",
+        attr: { type: "button", "aria-label": "Delete dock item", title: "Delete dock item" },
+      });
+      setIcon(deleteButton, "trash-2");
+      deleteButton.addEventListener("pointerdown", (event: PointerEvent) => event.stopPropagation());
+      deleteButton.addEventListener("click", (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        confirmDeleteDockItem(this.itemAccordionHost(), itemId);
+      });
+
+      const navigationControl = controlEl.querySelector<HTMLElement>(".ledge-item-accordion-toggle");
+      if (navigationControl) controlEl.insertBefore(controls, navigationControl);
     }
 
     return rows.length;
