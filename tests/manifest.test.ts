@@ -90,13 +90,15 @@ void test("release README points users to the published Wiki", () => {
   assert.doesNotMatch(readme, /## Development|npm install|npm run check/);
 });
 
-void test("Dock item pages expose a visible delete control and runtime work is event driven", () => {
-  const settings = fs.readFileSync("src/settings-tab.ts", "utf8");
+void test("Dock item deletion is confirmation-backed and runtime work is event driven", () => {
+  const enhancedSettings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
   const dock = fs.readFileSync("src/dock.ts", "utf8");
 
-  assert.match(settings, /name: "Delete dock item"/);
-  assert.match(settings, /\.setDestructive\(\)/);
-  assert.match(settings, /heading: "Backup & transfer"/);
+  assert.match(enhancedSettings, /ledge-item-delete-button/);
+  assert.match(accordion, /class ConfirmDockItemDeleteModal extends Modal/);
+  assert.match(accordion, /\.setDestructive\(\)/);
+  assert.match(accordion, /host\.expandedItemIds\.delete\(itemId\)/);
   assert.doesNotMatch(dock, /setInterval\(|MutationObserver/);
 });
 
@@ -120,7 +122,6 @@ void test("corner trigger pills use perpendicular rounded arms", () => {
     /\[data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?height: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
   );
 });
-
 
 void test("workspace anchoring and Dock item accordion stay regression-covered", () => {
   const dock = fs.readFileSync("src/dock.ts", "utf8");
