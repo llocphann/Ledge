@@ -557,7 +557,8 @@ class DockInstance extends Component {
   }
 
   private ensureWorkspaceHost(): void {
-    const host = this.workspaceHost();
+    const position = this.controller.settings().position;
+    const host = isCornerPosition(position) ? this.document.body : this.workspaceHost();
     if (host && this.root.parentElement !== host) host.appendChild(this.root);
   }
 
