@@ -261,6 +261,7 @@ function alignItemHeader(setting: Setting): void {
     gridTemplateColumns: "minmax(0, 1fr) auto",
     alignItems: "center",
     columnGap: "var(--size-4-3)",
+    padding: "var(--size-4-2) var(--size-4-3)",
   });
   setting.infoEl.setCssStyles({
     width: "100%",
@@ -514,6 +515,9 @@ export function renderDockItemsAccordion(setting: Setting, host: DockItemsAccord
       attr: { type: "button", "aria-label": "Toggle dock item settings" },
     });
     const details = wrapper.createDiv({ cls: "ledge-item-accordion-details" });
+    details.setCssStyles({
+      padding: "0 var(--size-4-2) var(--size-4-2)",
+    });
 
     const setExpanded = (expanded: boolean): void => {
       wrapper.classList.toggle("is-expanded", expanded);
@@ -550,12 +554,14 @@ export function renderDockItemsAccordion(setting: Setting, host: DockItemsAccord
     setExpanded(host.expandedItemIds.has(item.id));
   }
 
-  const addRow = new Setting(container)
-    .setName("Add dock item")
-    .setDesc("Create a new dock item.");
+  const addRow = new Setting(container);
   addRow.settingEl.addClass("ledge-add-item-row");
+  addRow.infoEl.setCssStyles({ display: "none" });
+  addRow.controlEl.setCssStyles({
+    width: "100%",
+    justifyContent: "flex-end",
+  });
   addRow.addButton((button) => button
-    .setIcon("plus")
     .setButtonText("Add item")
     .onClick(() => {
       const item = createDockItem(host.plugin.settings.items);
