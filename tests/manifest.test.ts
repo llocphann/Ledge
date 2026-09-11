@@ -143,6 +143,7 @@ void test("workspace anchoring and Dock item accordion stay regression-covered",
   assert.match(accordion, /item\.enabled \? "" : "Disabled"/);
   assert.doesNotMatch(accordion, /item\.enabled \? "Enabled" : "Hidden"/);
   assert.match(accordion, /Path to a note, base, canvas, or file\./);
-  assert.match(styles, /\.ledge-settings-root \.setting-group \.setting-items \{[\s\S]*?background: transparent;/);
+  assert.match(styles, /\.ledge-settings-panel-items > \.setting-items \{[\s\S]*?background: transparent;/);
+  assert.doesNotMatch(styles, /\.ledge-settings-root \.setting-group \.setting-items \{/);
   assert.doesNotMatch(styles, /data-ledge-settings-tab="items"/);
 });
