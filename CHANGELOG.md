@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1
+
+- Fix all four corner trigger pills so their two rounded arms render perpendicular again after workspace-host anchoring changes.
+- Keep the fix isolated to corner overlay hosting; straight-edge Dock positioning and existing workspace geometry behavior remain unchanged.
+
 ## 2.2.0
 
 - Keep every Dock and trigger anchored to the active workspace content and observe live workspace geometry so collapsing or reopening sidebars repositions them immediately.
