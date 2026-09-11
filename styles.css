@@ -687,6 +687,10 @@
   display: block;
 }
 
+.ledge-settings-root .setting-group .setting-items {
+  background: transparent;
+}
+
 .ledge-settings-panel-items {
   display: grid;
   gap: var(--size-4-4);
@@ -757,7 +761,6 @@
 .ledge-delete-confirmation-actions .setting-item-info {
   display: none;
 }
-
 
 .ledge-settings-item {
   padding: var(--size-4-2) var(--size-4-4);
@@ -836,7 +839,6 @@
 .ledge-settings-root:not([data-ledge-settings-tab="visibility"]) .ledge-settings-panel-visibility,
 .ledge-settings-root:not([data-ledge-settings-tab="trigger"]) .ledge-settings-panel-trigger,
 .ledge-settings-root:not([data-ledge-settings-tab="appearance"]) .ledge-settings-panel-appearance,
-.ledge-settings-root:not([data-ledge-settings-tab="items"]) .ledge-settings-panel-items,
 .ledge-settings-root:not([data-ledge-settings-tab="data"]) .ledge-settings-panel-data,
 .ledge-settings-root:not([data-ledge-settings-tab="about"]) .ledge-settings-panel-about {
   display: none;
