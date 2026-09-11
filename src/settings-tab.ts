@@ -282,20 +282,20 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: "Enable dock",
-          desc: "Show or hide the workspace dock without disabling its extension.",
+          desc: "Show or hide this Dock.",
           control: { type: "toggle", key: "enabled" },
         },
         {
           name: "Position",
-          desc: "Corner positions arrange items as an L-shaped 90-degree dock.",
+          desc: "Choose an edge or 90° corner.",
           control: { type: "dropdown", key: "position", options: POSITION_LABELS },
         },
         this.slider("Item size", "Size of each dock button.", "itemSize", 30, 84, 1, "px"),
-        this.slider("Icon size", "Default icon size. Individual items can override it.", "iconSize", 14, 72, 1, "px"),
+        this.slider("Icon size", "Default icon size; items can override it.", "iconSize", 14, 72, 1, "px"),
         this.slider("Gap", "Space between dock items.", "gap", 0, 32, 1, "px"),
-        this.slider("Padding", "Space around items inside the dock surface.", "padding", 0, 32, 1, "px"),
-        this.slider("Corner radius", "Rounding of the dock surface and item tiles.", "radius", 0, 40, 1, "px"),
-        this.slider("Edge offset", "Move the dock inward from its selected pane edge.", "edgeOffset", 0, 160, 1, "px"),
+        this.slider("Padding", "Space inside the dock surface.", "padding", 0, 32, 1, "px"),
+        this.slider("Corner radius", "Round the dock and item tiles.", "radius", 0, 40, 1, "px"),
+        this.slider("Edge offset", "Move the Dock inward from the pane edge.", "edgeOffset", 0, 160, 1, "px"),
       ],
     };
   }
@@ -308,26 +308,26 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: "Auto-hide",
-          desc: "Keep only a small edge trigger visible until the dock is hovered or focused.",
+          desc: "Hide the Dock until its edge trigger is hovered or focused.",
           control: { type: "toggle", key: "autoHide" },
         },
-        this.slider("Motion duration", "Duration of reveal, hide, and magnification transitions.", "motionDuration", 0, 1000, 10, "ms"),
+        this.slider("Motion duration", "Reveal, hide, and magnification duration.", "motionDuration", 0, 1000, 10, "ms"),
         {
           name: "Magnification",
           desc: "Magnify the focused item and its immediate neighbors.",
           control: { type: "toggle", key: "magnification" },
         },
         {
-          ...this.slider("Focused scale", "Maximum scale of the hovered or keyboard-focused item.", "magnificationScale", 1, 2, 0.05, "×"),
+          ...this.slider("Focused scale", "Scale of the hovered or focused item.", "magnificationScale", 1, 2, 0.05, "×"),
           visible: () => this.ledge.settings.magnification,
         },
         {
-          ...this.slider("Neighbor scale", "Scale of the items directly beside the focused item.", "neighborScale", 1, 1.6, 0.05, "×"),
+          ...this.slider("Neighbor scale", "Scale of adjacent items.", "neighborScale", 1, 1.6, 0.05, "×"),
           visible: () => this.ledge.settings.magnification,
         },
         {
           name: "Show labels",
-          desc: "Display an item label while its button is hovered or focused.",
+          desc: "Show item labels on hover or focus.",
           control: { type: "toggle", key: "showLabels" },
         },
       ],
@@ -343,7 +343,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         items: [
           {
             name: "Rule priority",
-            desc: "With no enabled include rules, Ledge appears everywhere. Enabled include rules restrict where it may appear, and an enabled exclude rule always wins. Rules can match a note name, exact path, folder, or tag.",
+            desc: "Include rules limit where the Dock appears. Exclude rules always take priority.",
             searchable: false,
           },
         ],
@@ -405,7 +405,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Match by",
-          desc: "Tag rules also match nested tags. Folder rules include every descendant file.",
+          desc: "Tags include nested tags; folders include descendants.",
           control: {
             type: "dropdown",
             key: key("matchType"),
@@ -467,13 +467,13 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: "Edge trigger",
-          desc: "This activation strip stays attached to the active root pane. It is used only while auto-hide is enabled.",
+          desc: "Reveals the Dock from the active pane edge when auto-hide is on.",
           searchable: false,
         },
         {
           ...this.slider(
             "Activation thickness",
-            "Thickness of the pointer-sensitive area along the pane edge.",
+            "Thickness of the edge activation area.",
             "triggerSize",
             4,
             64,
@@ -485,7 +485,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Activation length",
-            "Length of the pointer-sensitive area along a straight pane edge.",
+            "Length of the edge activation area.",
             "triggerLength",
             24,
             360,
@@ -496,13 +496,13 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Activation area",
-          desc: "The rectangle around the pill is the pointer-sensitive hitbox. When its background is transparent, the active pane or theme color shows through. These controls paint that outer area without changing its hover size.",
+          desc: "Pointer-sensitive area used to reveal the Dock.",
           searchable: false,
           visible: enabled,
         },
         {
           name: "Show activation area background",
-          desc: "Draw a controllable background behind the pill instead of exposing the pane background directly.",
+          desc: "Show a background behind the trigger pill.",
           control: { type: "toggle", key: "triggerAreaShowBackground" },
           visible: enabled,
         },
@@ -565,7 +565,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Activation area radius",
-            "Rounding of the outer pointer-sensitive rectangle.",
+            "Round the activation area.",
             "triggerAreaRadius",
             0,
             40,
@@ -593,7 +593,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom activation area border color",
-          desc: "Disable this option to use the active theme border color.",
+          desc: "Use the theme border when disabled.",
           control: { type: "toggle", key: "triggerAreaBorderColorEnabled" },
           visible: areaBorderVisible,
         },
@@ -606,7 +606,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Reveal delay",
-            "Time spent hovering the trigger before the dock appears.",
+            "Hover time before the Dock appears.",
             "revealDelay",
             0,
             3000,
@@ -618,7 +618,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Hide delay",
-            "How long the dock remains visible after the pointer leaves.",
+            "Delay before the Dock hides.",
             "hideDelay",
             0,
             10000,
@@ -629,20 +629,20 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Trigger pill",
-          desc: "The pill is the smaller visual indicator drawn inside the activation area.",
+          desc: "Visual indicator inside the activation area.",
           searchable: false,
           visible: enabled,
         },
         {
           name: "Show trigger pill",
-          desc: "Hide only the pill. The activation area remains available so the Dock can still be revealed.",
+          desc: "Show the visual pill inside the activation area.",
           control: { type: "toggle", key: "showTrigger" },
           visible: enabled,
         },
         {
           ...this.slider(
             "Surface thickness",
-            "Thickness of the visible strip inside the larger activation area.",
+            "Thickness of the visible trigger pill.",
             "triggerSurfaceThickness",
             1,
             48,
@@ -653,13 +653,13 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Show background",
-          desc: "Draw a surface inside the trigger. The activation area still works when this is off.",
+          desc: "Show a background on the trigger pill.",
           control: { type: "toggle", key: "triggerShowBackground" },
           visible: surfaceVisible,
         },
         {
           name: "Background style",
-          desc: "Theme follows the active Obsidian palette. Solid and gradient use the colors below.",
+          desc: "Use theme, solid, or gradient colors.",
           control: {
             type: "dropdown",
             key: "triggerSurfaceMode",
@@ -674,7 +674,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         {
           ...this.slider(
             "Background opacity",
-            "Opacity of the visible surface without reducing the activation area.",
+            "Opacity of the visible trigger surface.",
             "triggerSurfaceOpacity",
             0,
             100,
@@ -746,7 +746,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom border color",
-          desc: "Disable this option to use the active theme border color.",
+          desc: "Use the theme border when disabled.",
           control: { type: "toggle", key: "triggerBorderColorEnabled" },
           visible: borderVisible,
         },
@@ -768,17 +768,17 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: "Show dock background",
-          desc: "Show the shared surface behind dock items. Item tiles remain visible when this is off.",
+          desc: "Show the shared surface behind dock items.",
           control: { type: "toggle", key: "showDockBackground" },
         },
         {
           name: "Show dock border",
-          desc: "Show the outer border around the dock surface. Item tile borders are unaffected.",
+          desc: "Show the outer dock border.",
           control: { type: "toggle", key: "showDockBorder" },
         },
         {
           name: "Surface",
-          desc: "Theme mode follows the active palette. Solid and gradient modes use custom colors.",
+          desc: "Use theme, solid, or gradient colors.",
           control: {
             type: "dropdown",
             key: "surfaceMode",
@@ -819,7 +819,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom accent color",
-          desc: "Disable this option to use the active theme accent.",
+          desc: "Use the theme accent when disabled.",
           control: { type: "toggle", key: "accentColorEnabled" },
         },
         {
@@ -829,7 +829,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom border color",
-          desc: "Disable this option to use the active theme border.",
+          desc: "Use the theme border when disabled.",
           control: { type: "toggle", key: "borderColorEnabled" },
           visible: () => this.ledge.settings.showDockBorder,
         },
@@ -878,7 +878,7 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: "Export settings",
-          desc: "Download a versioned JSON backup containing layout, trigger, visibility, and Dock item settings.",
+          desc: "Download all Ledge settings as a versioned JSON backup.",
           render: (setting) => {
             setting.addButton((button) =>
               button
@@ -890,7 +890,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Import settings",
-          desc: "Replace the current configuration with a validated Ledge JSON backup. Invalid and unsupported files are rejected.",
+          desc: "Replace current settings with a validated Ledge JSON backup.",
           render: (setting) => {
             setting.addButton((button) =>
               button
@@ -902,7 +902,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Import safety",
-          desc: "Imports are limited to 1 MB and normalized before use. Ledge caps imported Dock items and visibility rules to prevent oversized configurations from degrading the workspace.",
+          desc: "Imports are limited to 1 MB and checked before use.",
           searchable: false,
         },
       ],
@@ -917,17 +917,17 @@ export class LedgeSettingTab extends PluginSettingTab {
       items: [
         {
           name: `Ledge ${this.ledge.manifest.version}`,
-          desc: "A configurable navigation dock for the edge of your Obsidian workspace.",
+          desc: "A configurable edge dock for Obsidian.",
           searchable: false,
         },
         {
           name: "Restore defaults",
-          desc: "Replace every layout, appearance, behavior, and item setting with the original defaults.",
+          desc: "Restore all settings to their defaults.",
           action: () => this.restoreDefaults(),
         },
         {
           name: "Buy me a coffee",
-          desc: "If Ledge is useful to you, you can support its continued development.",
+          desc: "Support Ledge development.",
           searchable: false,
           render: (setting) => {
             const link = setting.controlEl.createEl("a", {
@@ -974,7 +974,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Target path",
-          desc: "Vault-relative path to a note, base file, canvas, or another file.",
+          desc: "Path to a note, base, canvas, or file.",
           render: (setting) => this.renderFilePathControl(
             setting, key("target"), "target", "Folder/Note.md", "Target path", true,
           ),
@@ -992,13 +992,13 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Icon name",
-          desc: "Lucide icon ID, for example library, home, or dumbbell.",
+          desc: "Enter a Lucide icon ID.",
           control: { type: "text", key: key("icon"), placeholder: "circle" },
           visible: () => item.iconSource === "lucide",
         },
         {
           name: "Icon path",
-          desc: "Choose a PNG, JPEG, WebP, GIF, or SVG file stored in the vault.",
+          desc: "Choose an image from the vault.",
           render: (setting) => this.renderFilePathControl(
             setting, key("icon"), "image", "Assets/icon.png", "Icon path",
           ),
@@ -1006,7 +1006,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Image rendering",
-          desc: "Tint creates a theme-colored silhouette. Original preserves source colors.",
+          desc: "Tint follows the theme; Original keeps source colors.",
           control: {
             type: "dropdown",
             key: key("iconRenderMode"),
@@ -1016,7 +1016,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Icon size override",
-          desc: "Set to 0 to inherit the global icon size.",
+          desc: "0 uses the global icon size.",
           control: {
             type: "slider",
             key: key("iconSize"),
@@ -1028,7 +1028,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom icon color",
-          desc: "Disable this option to inherit the dock accent.",
+          desc: "Use a custom icon color.",
           control: { type: "toggle", key: key("iconColorEnabled") },
         },
         {
@@ -1038,7 +1038,7 @@ export class LedgeSettingTab extends PluginSettingTab {
         },
         {
           name: "Custom tile gradient",
-          desc: "Override the shared tile colors for this item.",
+          desc: "Override shared tile colors.",
           control: { type: "toggle", key: key("tileGradientEnabled") },
         },
         {
