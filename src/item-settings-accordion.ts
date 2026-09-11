@@ -214,6 +214,83 @@ function renderCommittedFilePath(
   };
 }
 
+function alignItemDetailSettings(details: HTMLElement): void {
+  for (const row of details.querySelectorAll<HTMLElement>(":scope > .setting-item")) {
+    row.setCssStyles({
+      display: "grid",
+      gridTemplateColumns: "minmax(150px, 0.82fr) minmax(0, 1.18fr)",
+      alignItems: "center",
+      columnGap: "var(--size-4-4)",
+    });
+
+    const info = row.querySelector<HTMLElement>(":scope > .setting-item-info");
+    info?.setCssStyles({
+      width: "100%",
+      minWidth: "0",
+      marginRight: "0",
+      textAlign: "right",
+    });
+
+    const name = info?.querySelector<HTMLElement>(".setting-item-name");
+    name?.setCssStyles({
+      width: "100%",
+      textAlign: "right",
+    });
+
+    const description = info?.querySelector<HTMLElement>(".setting-item-description");
+    description?.setCssStyles({
+      width: "100%",
+      marginTop: "2px",
+      lineHeight: "1.35",
+      textAlign: "right",
+    });
+
+    const control = row.querySelector<HTMLElement>(":scope > .setting-item-control");
+    control?.setCssStyles({
+      width: "100%",
+      minWidth: "0",
+      marginLeft: "0",
+      justifyContent: "flex-start",
+    });
+  }
+}
+
+function alignItemHeader(setting: Setting): void {
+  setting.settingEl.setCssStyles({
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "center",
+    columnGap: "var(--size-4-3)",
+  });
+  setting.infoEl.setCssStyles({
+    width: "100%",
+    minWidth: "0",
+    marginRight: "0",
+    textAlign: "left",
+  });
+  setting.controlEl.setCssStyles({
+    width: "auto",
+    minWidth: "max-content",
+    marginLeft: "0",
+    justifyContent: "flex-end",
+  });
+
+  const name = setting.infoEl.querySelector<HTMLElement>(".setting-item-name");
+  name?.setCssStyles({
+    width: "100%",
+    textAlign: "left",
+  });
+  const description = setting.infoEl.querySelector<HTMLElement>(".setting-item-description");
+  description?.setCssStyles({
+    width: "100%",
+    maxWidth: "100%",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    textAlign: "left",
+  });
+}
+
 function renderItemDetails(
   details: HTMLElement,
   host: DockItemsAccordionHost,
@@ -252,7 +329,7 @@ function renderItemDetails(
 
   const target = new Setting(details)
     .setName("Target path")
-    .setDesc("Vault-relative path to a note, base file, canvas, or another file.");
+    .setDesc("Path to a note, base, canvas, or file.");
   cleanups.push(renderCommittedFilePath(
     target,
     host,
@@ -275,7 +352,7 @@ function renderItemDetails(
   if (item.iconSource === "lucide") {
     const icon = new Setting(details)
       .setName("Icon")
-      .setDesc("Choose from the built-in icon library or type an Obsidian icon ID manually.");
+      .setDesc("Pick a built-in icon or enter an icon ID.");
     let pending = item.icon;
     let committed = item.icon;
     let inputEl: HTMLInputElement | null = null;
@@ -314,7 +391,7 @@ function renderItemDetails(
   } else {
     const iconPath = new Setting(details)
       .setName("Icon path")
-      .setDesc("Choose a PNG, JPEG, webp, GIF, or SVG file stored in the vault.");
+      .setDesc("Choose an image from the vault.");
     cleanups.push(renderCommittedFilePath(
       iconPath,
       host,
@@ -324,7 +401,7 @@ function renderItemDetails(
     ));
     const rendering = new Setting(details)
       .setName("Image rendering")
-      .setDesc("Tint creates a theme-colored silhouette. Original preserves source colors.");
+      .setDesc("Tint follows the theme; Original keeps source colors.");
     rendering.addDropdown((dropdown) => dropdown
       .addOptions({ tint: "Tint", original: "Original colors" })
       .setValue(item.iconRenderMode)
@@ -333,7 +410,7 @@ function renderItemDetails(
 
   const iconSize = new Setting(details)
     .setName("Icon size override")
-    .setDesc("Set to 0 to inherit the global icon size.");
+    .setDesc("0 uses the global icon size.");
   iconSize.addSlider((slider) => slider
     .setLimits(0, 96, 1)
     .setValue(item.iconSize)
@@ -341,7 +418,7 @@ function renderItemDetails(
 
   const iconColorToggle = new Setting(details)
     .setName("Custom icon color")
-    .setDesc("Disable this option to inherit the dock accent.");
+    .setDesc("Use a custom icon color.");
   iconColorToggle.addToggle((toggle) => toggle
     .setValue(Boolean(item.iconColor))
     .onChange((value) => {
@@ -356,7 +433,7 @@ function renderItemDetails(
 
   const gradientToggle = new Setting(details)
     .setName("Custom tile gradient")
-    .setDesc("Override the shared tile colors for this item.");
+    .setDesc("Override shared tile colors.");
   gradientToggle.addToggle((toggle) => toggle
     .setValue(Boolean(item.tileGradientStart || item.tileGradientEnd))
     .onChange((value) => {
@@ -372,6 +449,8 @@ function renderItemDetails(
       .setValue(item.tileGradientEnd || "#111827")
       .onChange((value) => { void host.setControlValue(key("tileGradientEnd"), value); }));
   }
+
+  alignItemDetailSettings(details);
 
   return () => {
     for (const cleanup of cleanups.splice(0)) cleanup();
@@ -396,7 +475,8 @@ export function renderDockItemsAccordion(setting: Setting, host: DockItemsAccord
       const desc = header.row.querySelector<HTMLElement>(".setting-item-description");
       if (name) name.textContent = itemDisplayName(host, itemId);
       if (desc) desc.textContent = item.target || "No target path";
-      header.state.textContent = item.enabled ? "Enabled" : "Hidden";
+      header.state.textContent = item.enabled ? "" : "Disabled";
+      header.state.hidden = item.enabled;
       header.warning.hidden = targetExists(host.plugin, item.target);
     }
   };
@@ -415,7 +495,12 @@ export function renderDockItemsAccordion(setting: Setting, host: DockItemsAccord
       .setDesc(item.target || "No target path");
     header.settingEl.addClasses(["ledge-settings-item-header", "mod-navigable", "tappable"]);
     header.settingEl.dataset.ledgeItemId = item.id;
-    const state = header.controlEl.createSpan({ cls: "ledge-item-row-state", text: item.enabled ? "Enabled" : "Hidden" });
+    alignItemHeader(header);
+    const state = header.controlEl.createSpan({
+      cls: "ledge-item-row-state",
+      text: item.enabled ? "" : "Disabled",
+    });
+    state.hidden = item.enabled;
     const warning = header.controlEl.createSpan({
       cls: "ledge-item-row-warning",
       attr: { "aria-label": "Target path is missing", title: "Target path is missing" },
@@ -467,7 +552,7 @@ export function renderDockItemsAccordion(setting: Setting, host: DockItemsAccord
 
   const addRow = new Setting(container)
     .setName("Add dock item")
-    .setDesc("Create a new shortcut and open its settings.");
+    .setDesc("Create a new dock item.");
   addRow.settingEl.addClass("ledge-add-item-row");
   addRow.addButton((button) => button
     .setIcon("plus")
