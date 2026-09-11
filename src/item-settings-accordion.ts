@@ -215,7 +215,7 @@ function renderCommittedFilePath(
 }
 
 function alignItemDetailSettings(details: HTMLElement): void {
-  for (const row of details.querySelectorAll<HTMLElement>(":scope > .setting-item")) {
+  for (const row of Array.from(details.querySelectorAll<HTMLElement>(":scope > .setting-item"))) {
     row.setCssStyles({
       display: "grid",
       gridTemplateColumns: "minmax(150px, 0.82fr) minmax(0, 1.18fr)",
