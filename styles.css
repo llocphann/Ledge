@@ -211,6 +211,39 @@
   bottom: 0;
 }
 
+/* Corner trigger pill joints: preserve arm size while making the shared corner explicitly perpendicular. */
+.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
+  border-radius: 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0;
+}
+
+.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::after {
+  border-radius: 0 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius);
+}
+
+.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
+  border-radius: var(--ledge-trigger-radius) 0 0 var(--ledge-trigger-radius);
+}
+
+.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::after {
+  border-radius: 0 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius);
+}
+
+.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
+  border-radius: 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0;
+}
+
+.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::after {
+  border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
+}
+
+.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
+  border-radius: var(--ledge-trigger-radius) 0 0 var(--ledge-trigger-radius);
+}
+
+.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {
+  border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
+}
+
 .ledge-dock-trigger:hover::before,
 .ledge-dock-trigger:focus-visible::before,
 .ledge-dock-trigger.is-visible::before,
