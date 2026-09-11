@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.2
+
+- Render each corner trigger as one unified L-shaped surface so gradient, opacity, and hover treatment stay continuous through the 90-degree joint.
+- Preserve the existing corner activation geometry, arm length, visible thickness, straight-edge triggers, and Dock behavior.
+
 ## 2.2.1
 
 - Fix all four corner trigger pills so their two rounded arms render perpendicular again after workspace-host anchoring changes.
