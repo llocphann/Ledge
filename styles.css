@@ -687,7 +687,7 @@
   display: block;
 }
 
-.ledge-settings-root .setting-group .setting-items {
+.ledge-settings-panel-items > .setting-items {
   background: transparent;
 }
 
