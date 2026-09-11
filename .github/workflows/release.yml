@@ -13,19 +13,24 @@ permissions:
   attestations: write
 
 jobs:
-  tag:
+  stable-release:
     if: github.ref == 'refs/heads/stable' && startsWith(github.event.head_commit.message, 'Release Ledge ')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Sync package lock and create release tag
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Prepare release tag
+        id: release_meta
         run: |
           VERSION="$(node -p "require('./manifest.json').version")"
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
           test "$VERSION" = "$PACKAGE_VERSION"
-          test "${GITHUB_REF_NAME}" = "stable"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           node - <<'NODE'
           const fs = require('node:fs');
           const manifest = require('./manifest.json');
@@ -47,8 +52,27 @@ jobs:
           fi
           git tag "$VERSION" "$(git rev-parse HEAD)"
           git push origin "$VERSION"
+      - run: npm ci
+      - run: npm run check
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.version }}
+          name: Ledge ${{ steps.release_meta.outputs.version }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            main.js
+            manifest.json
+            styles.css
 
-  release:
+  tagged-release:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
