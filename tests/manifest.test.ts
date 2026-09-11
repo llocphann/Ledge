@@ -127,16 +127,22 @@ void test("workspace anchoring and Dock item accordion stay regression-covered",
   const dock = fs.readFileSync("src/dock.ts", "utf8");
   const settings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
   const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
 
   assert.match(dock, /workspaceHost\(\)/);
   assert.match(dock, /ResizeObserver/);
   assert.match(dock, /activeWorkspaceContent/);
   assert.match(settings, /ledge-item-delete-button/);
-  assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"items",[\s\S]*"trigger"/);
+  assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"trigger"/);
+  assert.doesNotMatch(settings, /itemRowDecoratorDefinition/);
+  assert.match(settings, /cls: "ledge-settings-panel-appearance ledge-settings-panel-items"/);
+  assert.doesNotMatch(settings, /items: "Items"/);
   assert.match(accordion, /ConfirmDockItemDeleteModal extends Modal/);
   assert.match(accordion, /ledge-item-accordion-toggle/);
   assert.match(accordion, /alignItemDetailSettings/);
   assert.match(accordion, /item\.enabled \? "" : "Disabled"/);
   assert.doesNotMatch(accordion, /item\.enabled \? "Enabled" : "Hidden"/);
   assert.match(accordion, /Path to a note, base, canvas, or file\./);
+  assert.match(styles, /\.ledge-settings-root \.setting-group \.setting-items \{[\s\S]*?background: transparent;/);
+  assert.doesNotMatch(styles, /data-ledge-settings-tab="items"/);
 });
