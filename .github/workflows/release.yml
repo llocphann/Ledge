@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - stable
     tags:
       - "*"
 
@@ -11,7 +13,30 @@ permissions:
   attestations: write
 
 jobs:
+  tag:
+    if: github.ref == 'refs/heads/stable' && startsWith(github.event.head_commit.message, 'Release Ledge ')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./manifest.json').version")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          test "$VERSION" = "$PACKAGE_VERSION"
+          test "${GITHUB_REF_NAME}" = "stable"
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists"
+            exit 1
+          fi
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "$VERSION"
+
   release:
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
