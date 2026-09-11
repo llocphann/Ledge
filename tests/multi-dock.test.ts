@@ -83,14 +83,14 @@ void test("all Dock positions anchor to the active workspace content area", () =
   assert.match(source, /ResizeObserver/);
 });
 
-void test("corner triggers render as perpendicular pill arms instead of a square", () => {
+void test("corner triggers keep their geometry while using one continuous surface", () => {
   const source = fs.readFileSync("src/dock.ts", "utf8");
   const styles = fs.readFileSync("styles.css", "utf8");
 
   assert.match(source, /const cornerExtent = Math\.max\(triggerSize \* 2\.6, 40\)/);
-  assert.match(styles, /data-position\*="-"[^\n]*ledge-dock-trigger::after/);
-  assert.match(styles, /width: 72%/);
-  assert.match(styles, /height: 72%/);
+  assert.match(styles, /--ledge-corner-arm-length: 72%/);
+  assert.match(styles, /--ledge-corner-mask-thickness: min\(100%, var\(--ledge-trigger-surface-thickness\)\)/);
+  assert.match(styles, /data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?content: none;/);
 });
 
 void test("enabling auto-hide hides an already-visible Dock immediately", () => {

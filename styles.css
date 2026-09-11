@@ -175,73 +175,190 @@
   border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
 }
 
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger {
+  --ledge-corner-arm-length: 72%;
+  --ledge-corner-mask-thickness: min(100%, var(--ledge-trigger-surface-thickness));
+}
+
 .ledge-dock-root[data-position*="-"] .ledge-dock-trigger::before {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(
+      var(--ledge-trigger-angle),
+      color-mix(in srgb, var(--ledge-trigger-start) var(--ledge-trigger-opacity), transparent),
+      color-mix(in srgb, var(--ledge-trigger-end) var(--ledge-trigger-opacity), transparent)
+    );
+  box-shadow: none;
+  filter:
+    drop-shadow(
+      var(--ledge-trigger-border-width) 0 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      calc(0px - var(--ledge-trigger-border-width)) 0 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      0 var(--ledge-trigger-border-width) 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      0 calc(0px - var(--ledge-trigger-border-width)) 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(0 5px 9px color-mix(in srgb, var(--background-primary) 54%, transparent));
+  mask-repeat: no-repeat;
+}
+
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {
+  content: none;
+}
+
+.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
+  mask:
+    linear-gradient(#000 0 0)
+      left 0 top 0 /
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2)
+      var(--ledge-corner-mask-thickness) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      left calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) top 0 /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat,
+    linear-gradient(#000 0 0)
+      left 0 top 0 /
+      var(--ledge-corner-mask-thickness)
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      left 0 top calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat;
+}
+
+.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
+  mask:
+    linear-gradient(#000 0 0)
+      right 0 top 0 /
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2)
+      var(--ledge-corner-mask-thickness) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      right calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) top 0 /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat,
+    linear-gradient(#000 0 0)
+      right 0 top 0 /
+      var(--ledge-corner-mask-thickness)
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      right 0 top calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat;
+}
+
+.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
+  mask:
+    linear-gradient(#000 0 0)
+      left 0 bottom 0 /
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2)
+      var(--ledge-corner-mask-thickness) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      left calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) bottom 0 /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat,
+    linear-gradient(#000 0 0)
+      left 0 bottom 0 /
+      var(--ledge-corner-mask-thickness)
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      left 0 bottom calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat;
+}
+
+.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
+  mask:
+    linear-gradient(#000 0 0)
+      right 0 bottom 0 /
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2)
+      var(--ledge-corner-mask-thickness) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      right calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) bottom 0 /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat,
+    linear-gradient(#000 0 0)
+      right 0 bottom 0 /
+      var(--ledge-corner-mask-thickness)
+      calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness) / 2) no-repeat,
+    radial-gradient(circle, #000 98%, transparent 100%)
+      right 0 bottom calc(var(--ledge-corner-arm-length) - var(--ledge-corner-mask-thickness)) /
+      var(--ledge-corner-mask-thickness) var(--ledge-corner-mask-thickness) no-repeat;
+}
+
+.ledge-dock-root.is-trigger-background-hidden[data-position*="-"] .ledge-dock-trigger::before {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger::before {
+  filter: drop-shadow(0 5px 9px color-mix(in srgb, var(--background-primary) 54%, transparent));
+}
+
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position*="-"]
+  .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position*="-"]
+  .ledge-dock-trigger::after {
+  content: "";
+  border: var(--ledge-trigger-border-width) solid
+    color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent);
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  backdrop-filter: none;
+  mask: none;
+}
+
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position*="-"]
+  .ledge-dock-trigger::before {
+  inset: auto;
   width: 72%;
   height: min(100%, var(--ledge-trigger-surface-thickness));
   border-radius: var(--ledge-trigger-radius);
 }
 
-.ledge-dock-root[data-position*="-"] .ledge-dock-trigger::after {
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position*="-"]
+  .ledge-dock-trigger::after {
   width: min(100%, var(--ledge-trigger-surface-thickness));
   height: 72%;
   border-radius: var(--ledge-trigger-radius);
 }
 
-.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before,
-.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::after {
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="top-left"]
+  .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="top-left"]
+  .ledge-dock-trigger::after {
   top: 0;
   left: 0;
 }
 
-.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before,
-.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::after {
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="top-right"]
+  .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="top-right"]
+  .ledge-dock-trigger::after {
   top: 0;
   right: 0;
 }
 
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before,
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::after {
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="bottom-left"]
+  .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="bottom-left"]
+  .ledge-dock-trigger::after {
   bottom: 0;
   left: 0;
 }
 
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before,
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="bottom-right"]
+  .ledge-dock-trigger::before,
+.ledge-dock-root.is-trigger-background-hidden:not(.is-trigger-border-hidden)[data-position="bottom-right"]
+  .ledge-dock-trigger::after {
   right: 0;
   bottom: 0;
-}
-
-/* Corner trigger pill joints: preserve arm size while making the shared corner explicitly perpendicular. */
-.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::before {
-  border-radius: 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0;
-}
-
-.ledge-dock-root[data-position="top-left"] .ledge-dock-trigger::after {
-  border-radius: 0 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius);
-}
-
-.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::before {
-  border-radius: var(--ledge-trigger-radius) 0 0 var(--ledge-trigger-radius);
-}
-
-.ledge-dock-root[data-position="top-right"] .ledge-dock-trigger::after {
-  border-radius: 0 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius);
-}
-
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::before {
-  border-radius: 0 var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0;
-}
-
-.ledge-dock-root[data-position="bottom-left"] .ledge-dock-trigger::after {
-  border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
-}
-
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::before {
-  border-radius: var(--ledge-trigger-radius) 0 0 var(--ledge-trigger-radius);
-}
-
-.ledge-dock-root[data-position="bottom-right"] .ledge-dock-trigger::after {
-  border-radius: var(--ledge-trigger-radius) var(--ledge-trigger-radius) 0 0;
 }
 
 .ledge-dock-trigger:hover::before,
@@ -255,6 +372,39 @@
   box-shadow:
     inset 0 1px color-mix(in srgb, var(--text-normal) 13%, transparent),
     0 7px 22px color-mix(in srgb, var(--ledge-accent) 24%, transparent);
+}
+
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:hover::before,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger:focus-visible::before,
+.ledge-dock-root[data-position*="-"] .ledge-dock-trigger.is-visible::before {
+  filter:
+    brightness(1.14)
+    drop-shadow(
+      var(--ledge-trigger-border-width) 0 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      calc(0px - var(--ledge-trigger-border-width)) 0 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      0 var(--ledge-trigger-border-width) 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(
+      0 calc(0px - var(--ledge-trigger-border-width)) 0
+      color-mix(in srgb, var(--ledge-trigger-border-color) 82%, transparent)
+    )
+    drop-shadow(0 7px 11px color-mix(in srgb, var(--ledge-accent) 24%, transparent));
+  box-shadow: none;
+}
+
+.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger:hover::before,
+.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger:focus-visible::before,
+.ledge-dock-root.is-trigger-border-hidden[data-position*="-"] .ledge-dock-trigger.is-visible::before {
+  filter:
+    brightness(1.14)
+    drop-shadow(0 7px 11px color-mix(in srgb, var(--ledge-accent) 24%, transparent));
 }
 /* stylelint-enable no-descending-specificity */
 

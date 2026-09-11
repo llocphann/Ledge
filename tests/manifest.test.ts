@@ -110,17 +110,13 @@ void test("settings persist only through the Obsidian plugin data API", () => {
   assert.doesNotMatch(main, /localStorage|sessionStorage/);
 });
 
-void test("corner trigger pills use perpendicular rounded arms", () => {
+void test("corner trigger surface is one continuous perpendicular block", () => {
   const styles = fs.readFileSync("styles.css", "utf8");
 
-  assert.match(
-    styles,
-    /\[data-position\*="-"\] \.ledge-dock-trigger::before \{[\s\S]*?width: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
-  );
-  assert.match(
-    styles,
-    /\[data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?height: 72%;[\s\S]*?border-radius: var\(--ledge-trigger-radius\);/,
-  );
+  assert.match(styles, /--ledge-corner-arm-length: 72%/);
+  assert.match(styles, /data-position="top-left"\] \.ledge-dock-trigger::before \{[\s\S]*?mask:/);
+  assert.match(styles, /data-position="bottom-right"\] \.ledge-dock-trigger::before \{[\s\S]*?mask:/);
+  assert.match(styles, /data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?content: none;/);
 });
 
 void test("workspace anchoring and Dock item accordion stay regression-covered", () => {
