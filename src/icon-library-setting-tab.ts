@@ -63,47 +63,6 @@ const SECTION_CLASSES: Record<DockSettingsSection, string> = {
   items: "ledge-settings-panel-items",
 };
 
-const COMPACT_DESCRIPTIONS: Record<string, string> = {
-  "Show or hide the workspace dock without disabling its extension.": "Show or hide this Dock.",
-  "Corner positions arrange items as an L-shaped 90-degree dock.": "Choose an edge or 90° corner.",
-  "Default icon size. Individual items can override it.": "Default icon size; items can override it.",
-  "Space around items inside the dock surface.": "Space inside the dock surface.",
-  "Rounding of the dock surface and item tiles.": "Round the dock and item tiles.",
-  "Move the dock inward from its selected pane edge.": "Move the Dock inward from the pane edge.",
-  "Keep only a small edge trigger visible until the dock is hovered or focused.": "Hide the Dock until its edge trigger is hovered or focused.",
-  "Duration of reveal, hide, and magnification transitions.": "Reveal, hide, and magnification duration.",
-  "Maximum scale of the hovered or keyboard-focused item.": "Scale of the hovered or focused item.",
-  "Scale of the items directly beside the focused item.": "Scale of adjacent items.",
-  "Display an item label while its button is hovered or focused.": "Show item labels on hover or focus.",
-  "With no enabled include rules, Ledge appears everywhere. Enabled include rules restrict where it may appear, and an enabled exclude rule always wins. Rules can match a note name, exact path, folder, or tag.": "Include rules limit where the Dock appears. Exclude rules always take priority.",
-  "Tag rules also match nested tags. Folder rules include every descendant file.": "Tags include nested tags; folders include descendants.",
-  "This activation strip stays attached to the active root pane. It is used only while auto-hide is enabled.": "Reveals the Dock from the active pane edge when auto-hide is on.",
-  "Thickness of the pointer-sensitive area along the pane edge.": "Thickness of the edge activation area.",
-  "Length of the pointer-sensitive area along a straight pane edge.": "Length of the edge activation area.",
-  "The rectangle around the pill is the pointer-sensitive hitbox. When its background is transparent, the active pane or theme color shows through. These controls paint that outer area without changing its hover size.": "Pointer-sensitive area used to reveal the Dock.",
-  "Draw a controllable background behind the pill instead of exposing the pane background directly.": "Show a background behind the trigger pill.",
-  "Rounding of the outer pointer-sensitive rectangle.": "Round the activation area.",
-  "Disable this option to use the active theme border color.": "Use the theme border when disabled.",
-  "Time spent hovering the trigger before the dock appears.": "Hover time before the Dock appears.",
-  "How long the dock remains visible after the pointer leaves.": "Delay before the Dock hides.",
-  "The pill is the smaller visual indicator drawn inside the activation area.": "Visual indicator inside the activation area.",
-  "Hide only the pill. The activation area remains available so the Dock can still be revealed.": "Show the visual pill inside the activation area.",
-  "Thickness of the visible strip inside the larger activation area.": "Thickness of the visible trigger pill.",
-  "Draw a surface inside the trigger. The activation area still works when this is off.": "Show a background on the trigger pill.",
-  "Theme follows the active Obsidian palette. Solid and gradient use the colors below.": "Use theme, solid, or gradient colors.",
-  "Opacity of the visible surface without reducing the activation area.": "Opacity of the visible trigger surface.",
-  "Show the shared surface behind dock items. Item tiles remain visible when this is off.": "Show the shared surface behind dock items.",
-  "Show the outer border around the dock surface. Item tile borders are unaffected.": "Show the outer dock border.",
-  "Theme mode follows the active palette. Solid and gradient modes use custom colors.": "Use theme, solid, or gradient colors.",
-  "Download a versioned JSON backup containing layout, trigger, visibility, and Dock item settings.": "Download all Ledge settings as a versioned JSON backup.",
-  "Replace the current configuration with a validated Ledge JSON backup. Invalid and unsupported files are rejected.": "Replace current settings with a validated Ledge JSON backup.",
-  "Imports are limited to 1 MB and normalized before use. Ledge caps imported Dock items and visibility rules to prevent oversized configurations from degrading the workspace.": "Imports are limited to 1 MB and checked before use.",
-  "A configurable navigation dock for the edge of your Obsidian workspace.": "A configurable edge dock for Obsidian.",
-  "Replace every layout, appearance, behavior, and item setting with the original defaults.": "Restore all settings to their defaults.",
-  "If Ledge is useful to you, you can support its continued development.": "Support Ledge development.",
-  "Choose from the built-in icon library or type an Obsidian icon ID manually.": "Pick a built-in icon or enter an icon ID.",
-};
-
 type MutableSettingDefinition = {
   name?: string;
   desc?: string;
@@ -186,7 +145,6 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
 
     this.decorateControls(definitions);
-    this.compactDescriptions(definitions);
     return definitions;
   }
 
@@ -221,17 +179,6 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     }
 
     await super.setControlValue(key, value);
-  }
-
-  private compactDescriptions(definitions: SettingDefinitionItem[]): void {
-    for (const definition of definitions) {
-      const mutable = definition as unknown as MutableSettingDefinition;
-      if (mutable.desc) {
-        const compact = COMPACT_DESCRIPTIONS[mutable.desc];
-        if (compact) mutable.desc = compact;
-      }
-      if (Array.isArray(mutable.items)) this.compactDescriptions(mutable.items);
-    }
   }
 
   private itemRowDecoratorDefinition(): SettingDefinitionItem {
