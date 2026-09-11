@@ -135,4 +135,8 @@ void test("workspace anchoring and Dock item accordion stay regression-covered",
   assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"items",[\s\S]*"trigger"/);
   assert.match(accordion, /ConfirmDockItemDeleteModal extends Modal/);
   assert.match(accordion, /ledge-item-accordion-toggle/);
+  assert.match(accordion, /alignItemDetailSettings/);
+  assert.match(accordion, /item\.enabled \? "" : "Disabled"/);
+  assert.doesNotMatch(accordion, /item\.enabled \? "Enabled" : "Hidden"/);
+  assert.match(accordion, /Path to a note, base, canvas, or file\./);
 });
