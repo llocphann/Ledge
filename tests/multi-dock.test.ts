@@ -45,7 +45,10 @@ void test("Dock section tabs are centered and follow the requested order", () =>
   const source = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
 
   assert.match(source, /private activeDockSection: DockSettingsSection = "appearance"/);
-  assert.match(source, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"items",[\s\S]*"trigger"/);
+  assert.match(source, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"trigger"/);
+  assert.doesNotMatch(source, /\| "items"/);
+  assert.doesNotMatch(source, /items: "Items"/);
+  assert.match(source, /cls: "ledge-settings-panel-appearance ledge-settings-panel-items"/);
   assert.match(source, /dockSectionNavigationDefinition/);
   assert.match(source, /cls: "ledge-dock-section-tabs"/);
   assert.match(source, /tabList\.setCssStyles\(\{ display: "contents" \}\)/);
@@ -207,8 +210,9 @@ void test("prerelease item settings expose pointer-captured drag and arrow reord
   const styles = fs.readFileSync("styles.css", "utf8");
 
   assert.match(base, /onReorder: \(oldIndex, newIndex\) =>/);
-  assert.match(enhanced, /private itemRowDecoratorDefinition\(\): SettingDefinitionItem/);
-  assert.match(enhanced, /render: \(\) => \{[\s\S]*this\.scheduleItemRowControls\(\)/);
+  assert.doesNotMatch(enhanced, /private itemRowDecoratorDefinition\(\): SettingDefinitionItem/);
+  assert.match(enhanced, /renderDockItemsAccordion\(setting, this\.itemAccordionHost\(\)\)[\s\S]*this\.scheduleItemRowControls\(\)/);
+  assert.match(enhanced, /cls: "ledge-settings-panel-appearance ledge-settings-panel-items"/);
   assert.doesNotMatch(enhanced, /override display\(\)/);
   assert.match(enhanced, /private itemRows\(\): Array<\{ itemId: string; row: HTMLElement \}>/);
   assert.match(enhanced, /"aria-label": "Drag to reorder dock item"/);
@@ -224,7 +228,6 @@ void test("prerelease item settings expose pointer-captured drag and arrow reord
   assert.match(enhanced, /"aria-label": "Move dock item down"/);
   assert.match(enhanced, /ledge-item-delete-button/);
   assert.match(enhanced, /querySelector<HTMLElement>\("\.ledge-item-accordion-toggle"\)/);
-  assert.match(styles, /\.ledge-item-row-decorator/);
   assert.match(styles, /\.ledge-item-drag-handle \{[\s\S]*touch-action: none;/);
   assert.match(main, /async saveSettings\(refresh = true, syncIcons = false\)/);
 });
