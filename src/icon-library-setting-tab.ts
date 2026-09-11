@@ -29,7 +29,6 @@ const POSITION_LABELS: Record<DockPosition, string> = {
 };
 
 type DockSettingsSection =
-  | "items"
   | "layout"
   | "behavior"
   | "visibility"
@@ -41,12 +40,10 @@ const DOCK_SETTINGS_SECTIONS: DockSettingsSection[] = [
   "layout",
   "behavior",
   "visibility",
-  "items",
   "trigger",
 ];
 
 const SECTION_LABELS: Record<DockSettingsSection, string> = {
-  items: "Items",
   layout: "Layout",
   behavior: "Behavior",
   visibility: "Visibility",
@@ -60,7 +57,6 @@ const SECTION_CLASSES: Record<DockSettingsSection, string> = {
   visibility: "ledge-settings-panel-visibility",
   trigger: "ledge-settings-panel-trigger",
   appearance: "ledge-settings-panel-appearance",
-  items: "ledge-settings-panel-items",
 };
 
 type MutableSettingDefinition = {
@@ -106,7 +102,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     const baseDefinitions = super.getSettingDefinitions();
     const definitions: SettingDefinitionItem[] = [];
     let dockWorkspaceInserted = false;
-    let itemDecoratorInserted = false;
+    let dockItemsInserted = false;
 
     this.containerEl.classList.add("ledge-settings-root");
     this.applyDockSectionVisibility();
@@ -128,20 +124,20 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
         continue;
       }
 
+      const classes = new Set((mutable.cls ?? "").split(/\s+/).filter(Boolean));
+      const isDockItemsDefinition = classes.has("ledge-settings-panel-items");
       const section = this.sectionForDefinition(definition);
       if (section && !dockWorkspaceInserted) {
         definitions.push(this.dockWorkspaceDefinitions());
         dockWorkspaceInserted = true;
       }
-      if (section === "items" && !itemDecoratorInserted) {
-        definitions.push(this.itemRowDecoratorDefinition());
-        itemDecoratorInserted = true;
-      }
-      if (section === "items") {
-        definitions.push(this.dockItemsAccordionDefinition());
-        continue;
-      }
+      if (isDockItemsDefinition) continue;
+
       definitions.push(definition);
+      if (section === "appearance" && !dockItemsInserted) {
+        definitions.push(this.dockItemsAccordionDefinition());
+        dockItemsInserted = true;
+      }
     }
 
     this.decorateControls(definitions);
@@ -181,18 +177,6 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     await super.setControlValue(key, value);
   }
 
-  private itemRowDecoratorDefinition(): SettingDefinitionItem {
-    return {
-      name: "Dock item reorder controls",
-      cls: "ledge-item-row-decorator",
-      searchable: false,
-      render: () => {
-        this.scheduleItemRowControls();
-        return () => this.clearItemDragState();
-      },
-    };
-  }
-
   private itemAccordionHost(): DockItemsAccordionHost {
     return {
       app: this.app,
@@ -208,7 +192,7 @@ export class LedgeIconLibrarySettingTab extends LedgeSettingTab {
     return {
       type: "group",
       heading: "Dock items",
-      cls: "ledge-settings-panel-items",
+      cls: "ledge-settings-panel-appearance ledge-settings-panel-items",
       items: [{
         name: "Dock items",
         searchable: false,
