@@ -50,13 +50,23 @@ Reload Obsidian and enable **Ledge** under **Community plugins**.
 
 See the [Ledge Wiki](https://github.com/llocphann/Ledge/wiki) for detailed guides to Dock presets, items and icons, visibility rules, auto-hide and triggers, appearance, backup/restore, and troubleshooting.
 
-## Support
+---
 
-If Ledge is useful to you, you can support its continued development:
+<div align="center">
+
+## ☕ Support Ledge
+
+If Ledge has made navigating your Obsidian workspace faster or more comfortable, you can support its continued development here.
 
 <a href="https://www.buymeacoffee.com/llocphann">
-  <img src="https://raw.githubusercontent.com/llocphann/Ledge/main/assets/buy-me-a-coffee.svg" alt="Buy me a coffee" width="217">
+  <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=llocphann&button_colour=6f5bd3&font_colour=ffffff&font_family=Inter&outline_colour=000000&coffee_colour=FFDD00" alt="Buy Me a Coffee" height="48">
 </a>
+
+<sub>Your support helps me keep refining Ledge, improving dock behavior, customization, visibility rules, and documentation.</sub>
+
+</div>
+
+---
 
 ## License
 
