@@ -876,8 +876,11 @@
 
 .ledge-settings-panel-items {
   display: grid;
-  gap: var(--size-4-4);
   margin: var(--size-4-3) 0 var(--size-4-6);
+}
+
+.ledge-settings-root .setting-group .setting-item:not(.setting-item-heading)::before {
+  border-top: 0;
 }
 
 .ledge-items-accordion-setting {
