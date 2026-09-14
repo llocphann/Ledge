@@ -7,6 +7,8 @@ interface Waiter {
   reject: (error: unknown) => void;
 }
 
+const timerHost = typeof window === "undefined" ? globalThis : window;
+
 /**
  * Serializes persistence writes and coalesces bursts of non-structural changes.
  * The latest scheduled snapshot wins, while explicit flushes remain immediate
@@ -15,7 +17,7 @@ interface Waiter {
 export class SettingsStore<T> {
   private readonly coalesceMs: number;
   private pendingValue: T | undefined;
-  private timer: ReturnType<typeof setTimeout> | null = null;
+  private timer: ReturnType<typeof globalThis.setTimeout> | null = null;
   private waiters: Waiter[] = [];
   private writeChain: Promise<void> = Promise.resolve();
 
@@ -28,12 +30,12 @@ export class SettingsStore<T> {
 
   schedule(value: T): Promise<void> {
     this.pendingValue = value;
-    if (this.timer !== null) clearTimeout(this.timer);
+    if (this.timer !== null) timerHost.clearTimeout(this.timer);
 
     const completion = new Promise<void>((resolve, reject) => {
       this.waiters.push({ resolve, reject });
     });
-    this.timer = setTimeout(() => {
+    this.timer = timerHost.setTimeout(() => {
       this.timer = null;
       void this.flushPending();
     }, this.coalesceMs);
@@ -43,7 +45,7 @@ export class SettingsStore<T> {
   flush(value?: T): Promise<void> {
     if (value !== undefined) this.pendingValue = value;
     if (this.timer !== null) {
-      clearTimeout(this.timer);
+      timerHost.clearTimeout(this.timer);
       this.timer = null;
     }
     return this.flushPending();
