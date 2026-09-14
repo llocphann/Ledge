@@ -83,6 +83,31 @@ jobs:
       - run: npm run check
       - name: Verify release build is deterministic
         run: git diff --exit-code
+      - name: Build release notes from changelog
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.VERSION;
+          const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+          const marker = `## ${version}`;
+          const start = changelog.indexOf(marker);
+
+          if (start < 0) {
+            throw new Error(`Missing ${marker} in CHANGELOG.md`);
+          }
+
+          const tail = changelog.slice(start + marker.length);
+          const nextHeading = tail.search(/\n##\s+/);
+          const body = (nextHeading < 0 ? tail : tail.slice(0, nextHeading)).trim();
+
+          if (!body) {
+            throw new Error(`Empty changelog section for ${version}`);
+          }
+
+          fs.writeFileSync("release-notes.md", `# Ledge ${version}\n\n${body}\n`);
+          NODE
       - name: Attest release assets
         uses: actions/attest@v4
         with:
@@ -93,7 +118,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          generate_release_notes: true
+          body_path: release-notes.md
           fail_on_unmatched_files: true
           files: |
             main.js
