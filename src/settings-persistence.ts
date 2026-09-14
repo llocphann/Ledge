@@ -12,6 +12,10 @@ export interface CanonicalLedgeSettings {
   docks: DockPresetSettings[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function cloneDockPreset(dock: DockPresetSettings): DockPresetSettings {
   return {
     ...dock,
@@ -19,6 +23,13 @@ function cloneDockPreset(dock: DockPresetSettings): DockPresetSettings {
     includeRules: dock.includeRules.map((rule) => ({ ...rule })),
     excludeRules: dock.excludeRules.map((rule) => ({ ...rule })),
   };
+}
+
+export function requiresCanonicalSettingsMigration(value: unknown): boolean {
+  if (!isRecord(value)) return true;
+  return value.settingsSchemaVersion !== LEDGE_DATA_SCHEMA_VERSION
+    || typeof value.selectedDockId !== "string"
+    || !Array.isArray(value.docks);
 }
 
 /**
