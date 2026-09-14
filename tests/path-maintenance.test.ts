@@ -5,6 +5,9 @@ import { addDockPreset, normalizeSettings } from "../src/settings";
 
 void test("vault rename updates all persisted path-bearing Dock fields in one transaction", () => {
   const settings = normalizeSettings(null);
+  const second = addDockPreset(settings);
+  assert.ok(second);
+
   const first = settings.docks[0]!;
   first.includeRules = [{ id: "inc", enabled: true, matchType: "path", matchValue: "Projects/Alpha.md" }];
   first.excludeRules = [{ id: "exc", enabled: true, matchType: "folder", matchValue: "Projects/Archive" }];
@@ -24,8 +27,6 @@ void test("vault rename updates all persisted path-bearing Dock fields in one tr
     tileGradientEnd: "",
   }];
 
-  const second = addDockPreset(settings);
-  assert.ok(second);
   second.enabled = false;
   second.items = [{
     id: "beta",
