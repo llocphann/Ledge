@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   LEDGE_DATA_SCHEMA_VERSION,
   canonicalizeLedgeSettings,
+  requiresCanonicalSettingsMigration,
 } from "../src/settings-persistence";
 import { normalizeSettings } from "../src/settings";
 
@@ -58,4 +59,14 @@ void test("canonical schema round-trips through the runtime normalizer", () => {
   assert.equal(restored.docks.length, 2);
   assert.equal(restored.position, "right");
   assert.equal(restored.itemSize, 59);
+});
+
+void test("pre-v3 plugin data is rewritten once while canonical data remains stable", () => {
+  const runtime = normalizeSettings({ position: "right", items: [] });
+  const canonical = canonicalizeLedgeSettings(runtime);
+
+  assert.equal(requiresCanonicalSettingsMigration(null), true);
+  assert.equal(requiresCanonicalSettingsMigration(runtime), true);
+  assert.equal(requiresCanonicalSettingsMigration({ ...runtime, settingsSchemaVersion: 2 }), true);
+  assert.equal(requiresCanonicalSettingsMigration(canonical), false);
 });
