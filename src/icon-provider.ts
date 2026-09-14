@@ -30,8 +30,11 @@ interface IconifySearchResponse {
 
 const ICONIFY_API = "https://api.iconify.design";
 const FETCH_CHUNK_SIZE = 20;
+const REMOTE_SEARCH_LIMIT = 32;
 const registeredIconBodies = new Map<string, string>();
 const cachedIconBodies = new Map<string, string>();
+const inFlightSearches = new Map<string, Promise<BuiltInIconChoice[]>>();
+const inFlightFetches = new Map<string, Promise<void>>();
 
 function isSupportedPrefix(value: string): value is IconifyPrefix {
   return ICONIFY_COLLECTIONS.some((collection) => collection.prefix === value);
@@ -52,9 +55,22 @@ function registerResponse(prefix: IconifyPrefix, response: IconifyIconResponse):
 
 async function fetchIconChunk(prefix: IconifyPrefix, names: string[]): Promise<void> {
   if (names.length === 0) return;
-  const icons = names.map(encodeURIComponent).join(",");
-  const response = await requestUrl(`${ICONIFY_API}/${prefix}.json?icons=${icons}`);
-  registerResponse(prefix, response.json as IconifyIconResponse);
+  const uniqueNames = [...new Set(names)].sort();
+  const key = `${prefix}:${uniqueNames.join(",")}`;
+  const existing = inFlightFetches.get(key);
+  if (existing) return existing;
+
+  const request = (async () => {
+    const icons = uniqueNames.map(encodeURIComponent).join(",");
+    const response = await requestUrl(`${ICONIFY_API}/${prefix}.json?icons=${icons}`);
+    registerResponse(prefix, response.json as IconifyIconResponse);
+  })();
+  inFlightFetches.set(key, request);
+  try {
+    await request;
+  } finally {
+    if (inFlightFetches.get(key) === request) inFlightFetches.delete(key);
+  }
 }
 
 export function restoreIconifyCache(pluginData: unknown): void {
@@ -115,13 +131,10 @@ export async function syncIconifyCache(iconIds: string[]): Promise<boolean> {
   return true;
 }
 
-export async function searchIconifyIcons(query: string): Promise<BuiltInIconChoice[]> {
-  const normalized = query.trim();
-  if (!normalized) return [];
-
+async function performIconifySearch(normalized: string): Promise<BuiltInIconChoice[]> {
   const response = await requestUrl(
     `${ICONIFY_API}/search?query=${encodeURIComponent(normalized)}`
-      + `&prefixes=${iconifyPrefixes()}&limit=96`,
+      + `&prefixes=${iconifyPrefixes()}&limit=${REMOTE_SEARCH_LIMIT}`,
   );
   const payload = response.json as IconifySearchResponse;
   const choices = (payload.icons ?? []).flatMap((qualifiedName) => {
@@ -131,8 +144,25 @@ export async function searchIconifyIcons(query: string): Promise<BuiltInIconChoi
     const name = qualifiedName.slice(separator + 1);
     if (!isSupportedPrefix(prefix) || !name || !shouldIncludeIconifyName(prefix, name)) return [];
     return [{ id: makeIconifyId(prefix, name), name: iconDisplayName(name) }];
-  });
+  }).slice(0, REMOTE_SEARCH_LIMIT);
 
+  // Only hydrate the bounded set that can actually be rendered by the picker.
   await ensureIconifyIcons(choices.map((choice) => choice.id));
   return choices;
+}
+
+export async function searchIconifyIcons(query: string): Promise<BuiltInIconChoice[]> {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return [];
+
+  const existing = inFlightSearches.get(normalized);
+  if (existing) return existing;
+
+  const request = performIconifySearch(normalized);
+  inFlightSearches.set(normalized, request);
+  try {
+    return await request;
+  } finally {
+    if (inFlightSearches.get(normalized) === request) inFlightSearches.delete(normalized);
+  }
 }
