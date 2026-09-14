@@ -9,6 +9,10 @@ import {
 import { MultiDockController } from "./multi-dock";
 import { SettingsStore } from "./services/settings-store";
 import {
+  canonicalizeLedgeSettings,
+  requiresCanonicalSettingsMigration,
+} from "./settings-persistence";
+import {
   addDockPreset,
   applyDockPreset,
   getDockPreset,
@@ -37,7 +41,8 @@ export default class LedgePlugin extends Plugin {
     restoreIconifyCache(storedSettings);
 
     const shouldPersistMigration = hasLegacyHotCornerSettings(storedSettings)
-      || hasLegacySingleDockSettings(storedSettings);
+      || hasLegacySingleDockSettings(storedSettings)
+      || requiresCanonicalSettingsMigration(storedSettings);
     this.settings = normalizeSettings(storedSettings);
     if (shouldPersistMigration) await this.savePersistedData();
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
@@ -142,7 +147,7 @@ export default class LedgePlugin extends Plugin {
 
   private persistedSnapshot(): Record<string, unknown> {
     return {
-      ...this.settings,
+      ...canonicalizeLedgeSettings(this.settings),
       [ICON_CACHE_DATA_KEY]: exportIconifyCache(),
     };
   }
