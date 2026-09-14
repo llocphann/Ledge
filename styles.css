@@ -876,7 +876,11 @@
 
 .ledge-settings-panel-items {
   display: grid;
-  margin: var(--size-4-3) 0 var(--size-4-6);
+  margin: var(--size-4-3) 0 0;
+}
+
+.ledge-settings-panel-items + .ledge-settings-data-inline {
+  margin-top: var(--size-4-3);
 }
 
 .ledge-settings-root .setting-group .setting-item:not(.setting-item-heading)::before {
