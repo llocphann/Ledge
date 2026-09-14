@@ -27,6 +27,7 @@ jobs:
       - run: npm ci
       - name: Validate release metadata
         id: release_meta
+        shell: bash
         run: |
           VERSION="$(node -p "require('./manifest.json').version")"
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
@@ -40,21 +41,84 @@ jobs:
           test "$VERSION" = "$LOCK_ROOT_VERSION"
           test "$MIN_APP_VERSION" = "$VERSIONS_MIN_APP"
 
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "Tag $VERSION already exists"
-            exit 1
+          TAG_SHA="$(git rev-list -n 1 "$VERSION" 2>/dev/null || true)"
+          if [ -n "$TAG_SHA" ]; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+            echo "tag_sha=$TAG_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
-
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - run: npm run check
       - name: Verify release job did not mutate tracked source
         run: git diff --exit-code
-      - name: Tag validated stable commit
+      - name: Create or verify release tag
+        env:
+          VERSION: ${{ steps.release_meta.outputs.version }}
+          TAG_EXISTS: ${{ steps.release_meta.outputs.tag_exists }}
+          TAG_SHA: ${{ steps.release_meta.outputs.tag_sha }}
+        shell: bash
+        run: |
+          if [ "$TAG_EXISTS" = "true" ]; then
+            if [ "$TAG_SHA" != "$GITHUB_SHA" ]; then
+              git diff --exit-code "$TAG_SHA" "$GITHUB_SHA" -- \
+                main.js manifest.json styles.css CHANGELOG.md \
+                package.json package-lock.json versions.json src tests
+            fi
+          else
+            git tag "$VERSION" "$GITHUB_SHA"
+            git push origin "$VERSION"
+          fi
+      - name: Check out tagged release source
+        env:
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        run: git checkout --detach "$VERSION"
+      - run: npm run check
+      - name: Verify tagged release build is deterministic
+        run: git diff --exit-code
+      - name: Build release notes from changelog
         env:
           VERSION: ${{ steps.release_meta.outputs.version }}
         run: |
-          git tag "$VERSION" "$GITHUB_SHA"
-          git push origin "$VERSION"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const version = process.env.VERSION;
+          const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+          const marker = `## ${version}`;
+          const start = changelog.indexOf(marker);
+
+          if (start < 0) {
+            throw new Error(`Missing ${marker} in CHANGELOG.md`);
+          }
+
+          const tail = changelog.slice(start + marker.length);
+          const nextHeading = tail.search(/\n##\s+/);
+          const body = (nextHeading < 0 ? tail : tail.slice(0, nextHeading)).trim();
+
+          if (!body) {
+            throw new Error(`Empty changelog section for ${version}`);
+          }
+
+          fs.writeFileSync("release-notes.md", `# Ledge ${version}\n\n${body}\n`);
+          NODE
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.version }}
+          name: ${{ steps.release_meta.outputs.version }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            main.js
+            manifest.json
+            styles.css
 
   tagged-release:
     if: startsWith(github.ref, 'refs/tags/')
