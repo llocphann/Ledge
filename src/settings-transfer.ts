@@ -1,16 +1,20 @@
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings";
+import {
+  canonicalizeLedgeSettings,
+  type CanonicalLedgeSettings,
+} from "./settings-persistence";
 import type { LedgeSettings } from "./types";
 
 export const LEDGE_SETTINGS_FORMAT = "ledge-settings";
-export const LEDGE_SETTINGS_SCHEMA_VERSION = 2;
-const SUPPORTED_SCHEMA_VERSIONS = new Set([1, LEDGE_SETTINGS_SCHEMA_VERSION]);
+export const LEDGE_SETTINGS_SCHEMA_VERSION = 3;
+const SUPPORTED_SCHEMA_VERSIONS = new Set([1, 2, LEDGE_SETTINGS_SCHEMA_VERSION]);
 
 interface LedgeSettingsEnvelope {
   format: typeof LEDGE_SETTINGS_FORMAT;
   schemaVersion: typeof LEDGE_SETTINGS_SCHEMA_VERSION;
   pluginVersion: string;
   exportedAt: string;
-  settings: LedgeSettings;
+  settings: CanonicalLedgeSettings;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -27,7 +31,7 @@ export function serializeLedgeSettings(
     schemaVersion: LEDGE_SETTINGS_SCHEMA_VERSION,
     pluginVersion,
     exportedAt: exportedAt.toISOString(),
-    settings: normalizeSettings(settings),
+    settings: canonicalizeLedgeSettings(settings),
   };
   return `${JSON.stringify(envelope, null, 2)}\n`;
 }
