@@ -67,6 +67,7 @@ void test("edge trigger replaces the removed hot-corner interface", () => {
 void test("release README points users to the published Wiki", () => {
   const settingsTab = fs.readFileSync("src/settings-tab.ts", "utf8");
   const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const runtime = fs.readFileSync("src/runtime/runtime-coordinator.ts", "utf8");
   const multiDock = fs.readFileSync("src/multi-dock.ts", "utf8");
   const settings = fs.readFileSync("src/settings.ts", "utf8");
   const roadmap = fs.readFileSync("ROADMAP.md", "utf8");
@@ -75,7 +76,8 @@ void test("release README points users to the published Wiki", () => {
   assert.match(settingsTab, /heading: "Context visibility"/);
   assert.match(settingsTab, /heading: include \? "Show Dock in" : "Hide Dock in"/);
   assert.match(dock, /dockVisibleForContext/);
-  assert.match(dock, /metadataCache\.on\("changed"/);
+  assert.doesNotMatch(dock, /metadataCache\.on\("changed"/);
+  assert.match(runtime, /metadataCache\.on\("changed"/);
   assert.match(multiDock, /class MultiDockController/);
   assert.match(settings, /availableDockPositions/);
   assert.match(roadmap, /Current foundation/);
@@ -88,12 +90,14 @@ void test("Dock item deletion is confirmation-backed and runtime work is event d
   const enhancedSettings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
   const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
   const dock = fs.readFileSync("src/dock.ts", "utf8");
+  const runtime = fs.readFileSync("src/runtime/runtime-coordinator.ts", "utf8");
 
   assert.match(enhancedSettings, /ledge-item-delete-button/);
   assert.match(accordion, /class ConfirmDockItemDeleteModal extends Modal/);
   assert.match(accordion, /\.setDestructive\(\)/);
   assert.match(accordion, /host\.expandedItemIds\.delete\(itemId\)/);
   assert.doesNotMatch(dock, /setInterval\(|MutationObserver/);
+  assert.doesNotMatch(runtime, /setInterval\(|MutationObserver/);
 });
 
 void test("settings persist only through the Obsidian plugin data API", () => {
@@ -122,6 +126,7 @@ void test("workspace anchoring and Dock item accordion stay regression-covered",
   assert.match(dock, /workspaceHost\(\)/);
   assert.match(dock, /ResizeObserver/);
   assert.match(dock, /activeWorkspaceContent/);
+  assert.match(dock, /DocumentRuntimeContext/);
   assert.match(settings, /ledge-item-delete-button/);
   assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"trigger"/);
   assert.doesNotMatch(settings, /itemRowDecoratorDefinition/);
