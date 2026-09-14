@@ -365,7 +365,10 @@ class DockInstance extends Component {
     this.renderVersion += 1;
     const version = this.renderVersion;
     const items = new Map(settings.items.map((item) => [item.id, item]));
-    for (const button of this.panel.querySelectorAll<HTMLButtonElement>(".ledge-dock-item")) {
+    const buttons = Array.from(
+      this.panel.querySelectorAll<HTMLButtonElement>(".ledge-dock-item"),
+    );
+    for (const button of buttons) {
       const item = items.get(button.dataset.itemId || "");
       if (!item) continue;
       this.applyItemVisualStyles(button, item);
@@ -710,8 +713,8 @@ class DockInstance extends Component {
   }
 
   private markActiveTarget(): void {
-    const activeFile = this.controller.leafForDocument(this.document)?.view;
-    const candidate: unknown = (activeFile as { file?: unknown } | undefined)?.file;
+    const activeView = this.controller.leafForDocument(this.document)?.view;
+    const candidate: unknown = (activeView as { file?: unknown } | undefined)?.file;
     const currentFile = candidate instanceof TFile ? candidate : null;
     const buttons = Array.from(
       this.panel.querySelectorAll<HTMLButtonElement>(".ledge-dock-item"),
