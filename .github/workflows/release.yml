@@ -24,53 +24,37 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Prepare release tag
+      - run: npm ci
+      - name: Validate release metadata
         id: release_meta
         run: |
           VERSION="$(node -p "require('./manifest.json').version")"
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          LOCK_VERSION="$(node -p "require('./package-lock.json').version")"
+          LOCK_ROOT_VERSION="$(node -p "require('./package-lock.json').packages?.['']?.version")"
+          MIN_APP_VERSION="$(node -p "require('./manifest.json').minAppVersion")"
+          VERSIONS_MIN_APP="$(node -p "require('./versions.json')[require('./manifest.json').version]")"
+
           test "$VERSION" = "$PACKAGE_VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const manifest = require('./manifest.json');
-          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-          lock.version = manifest.version;
-          if (lock.packages?.['']) lock.packages[''].version = manifest.version;
-          fs.writeFileSync('package-lock.json', `${JSON.stringify(lock, null, 2)}\n`);
-          NODE
-          if ! git diff --quiet -- package-lock.json; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "Sync package lock for ${VERSION}"
-            git push origin HEAD:stable
-          fi
+          test "$VERSION" = "$LOCK_VERSION"
+          test "$VERSION" = "$LOCK_ROOT_VERSION"
+          test "$MIN_APP_VERSION" = "$VERSIONS_MIN_APP"
+
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
             echo "Tag $VERSION already exists"
             exit 1
           fi
-          git tag "$VERSION" "$(git rev-parse HEAD)"
-          git push origin "$VERSION"
-      - run: npm ci
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - run: npm run check
-      - name: Attest release assets
-        uses: actions/attest@v4
-        with:
-          subject-path: |
-            main.js
-            manifest.json
-            styles.css
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.release_meta.outputs.version }}
-          name: ${{ steps.release_meta.outputs.version }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            main.js
-            manifest.json
-            styles.css
+      - name: Verify release job did not mutate tracked source
+        run: git diff --exit-code
+      - name: Tag validated stable commit
+        env:
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        run: |
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "$VERSION"
 
   tagged-release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -82,10 +66,23 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run check
-      - name: Verify tag and manifest version
+      - name: Verify tag and release metadata
         run: |
-          node -e "const manifest=require('./manifest.json'); if (process.env.GITHUB_REF_NAME !== manifest.version) process.exit(1)"
+          VERSION="$(node -p "require('./manifest.json').version")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          LOCK_VERSION="$(node -p "require('./package-lock.json').version")"
+          LOCK_ROOT_VERSION="$(node -p "require('./package-lock.json').packages?.['']?.version")"
+          MIN_APP_VERSION="$(node -p "require('./manifest.json').minAppVersion")"
+          VERSIONS_MIN_APP="$(node -p "require('./versions.json')[require('./manifest.json').version]")"
+
+          test "$GITHUB_REF_NAME" = "$VERSION"
+          test "$VERSION" = "$PACKAGE_VERSION"
+          test "$VERSION" = "$LOCK_VERSION"
+          test "$VERSION" = "$LOCK_ROOT_VERSION"
+          test "$MIN_APP_VERSION" = "$VERSIONS_MIN_APP"
+      - run: npm run check
+      - name: Verify release build is deterministic
+        run: git diff --exit-code
       - name: Attest release assets
         uses: actions/attest@v4
         with:
