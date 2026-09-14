@@ -117,16 +117,38 @@ void test("corner trigger surface is one continuous perpendicular block", () => 
   assert.match(styles, /data-position\*="-"\] \.ledge-dock-trigger::after \{[\s\S]*?content: none;/);
 });
 
-void test("workspace anchoring and Dock item accordion stay regression-covered", () => {
+void test("workspace anchoring uses a shared document registry", () => {
   const dock = fs.readFileSync("src/dock.ts", "utf8");
-  const settings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
-  const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
-  const styles = fs.readFileSync("styles.css", "utf8");
+  const registry = fs.readFileSync("src/runtime/document-registry.ts", "utf8");
+  const multiDock = fs.readFileSync("src/multi-dock.ts", "utf8");
 
   assert.match(dock, /workspaceHost\(\)/);
   assert.match(dock, /ResizeObserver/);
   assert.match(dock, /activeWorkspaceContent/);
-  assert.match(dock, /DocumentRuntimeContext/);
+  assert.match(dock, /documentRegistry\.context\(document\)/);
+  assert.doesNotMatch(dock, /iterateAllLeaves/);
+  assert.match(registry, /interface DocumentRuntimeContext/);
+  assert.match(registry, /iterateAllLeaves/);
+  assert.match(multiDock, /new DocumentRegistry\(host\.app\)/);
+});
+
+void test("Dock runtime supports incremental rendering and target caching", () => {
+  const dock = fs.readFileSync("src/dock.ts", "utf8");
+
+  assert.match(dock, /classifyDockChanges/);
+  assert.match(dock, /TargetResolutionIndex/);
+  assert.match(dock, /applyChanges\(dirty:/);
+  assert.match(dock, /if \(dirty\.has\("ITEMS"\)\)/);
+  assert.match(dock, /else if \(dirty\.has\("ICONS"\)\)/);
+  assert.match(dock, /private rebuildItems/);
+  assert.match(dock, /this\.panel\.replaceChildren\(\)/);
+});
+
+void test("Dock item accordion stays regression-covered", () => {
+  const settings = fs.readFileSync("src/icon-library-setting-tab.ts", "utf8");
+  const accordion = fs.readFileSync("src/item-settings-accordion.ts", "utf8");
+  const styles = fs.readFileSync("styles.css", "utf8");
+
   assert.match(settings, /ledge-item-delete-button/);
   assert.match(settings, /"appearance",[\s\S]*"layout",[\s\S]*"behavior",[\s\S]*"visibility",[\s\S]*"trigger"/);
   assert.doesNotMatch(settings, /itemRowDecoratorDefinition/);
