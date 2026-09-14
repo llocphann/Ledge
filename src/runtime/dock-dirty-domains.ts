@@ -75,8 +75,8 @@ function sameItemStructure(left: DockItemSettings[], right: DockItemSettings[]):
   if (left.length !== right.length) return false;
   return left.every((item, index) => {
     const other = right[index];
-    return Boolean(other)
-      && item.id === other.id
+    if (!other) return false;
+    return item.id === other.id
       && item.enabled === other.enabled
       && item.label === other.label
       && item.target === other.target;
@@ -87,8 +87,8 @@ function sameItemIcons(left: DockItemSettings[], right: DockItemSettings[]): boo
   if (left.length !== right.length) return false;
   return left.every((item, index) => {
     const other = right[index];
-    return Boolean(other)
-      && item.id === other.id
+    if (!other) return false;
+    return item.id === other.id
       && item.iconSource === other.iconSource
       && item.icon === other.icon
       && item.builtInIcon === other.builtInIcon
