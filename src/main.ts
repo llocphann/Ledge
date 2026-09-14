@@ -7,6 +7,7 @@ import {
   syncIconifyCache,
 } from "./icon-provider";
 import { MultiDockController } from "./multi-dock";
+import { attachSelectedDockSettingsView } from "./runtime/selected-dock-settings-view";
 import { SettingsStore } from "./services/settings-store";
 import {
   canonicalizeLedgeSettings,
@@ -24,6 +25,10 @@ import {
   syncSelectedDockPreset,
 } from "./settings";
 import type { DockPresetSettings, LedgeSettings } from "./types";
+
+function normalizeRuntimeSettings(value: unknown): LedgeSettings {
+  return attachSelectedDockSettingsView(normalizeSettings(value));
+}
 
 export default class LedgePlugin extends Plugin {
   settings!: LedgeSettings;
@@ -43,7 +48,7 @@ export default class LedgePlugin extends Plugin {
     const shouldPersistMigration = hasLegacyHotCornerSettings(storedSettings)
       || hasLegacySingleDockSettings(storedSettings)
       || requiresCanonicalSettingsMigration(storedSettings);
-    this.settings = normalizeSettings(storedSettings);
+    this.settings = normalizeRuntimeSettings(storedSettings);
     if (shouldPersistMigration) await this.savePersistedData();
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
 
@@ -81,7 +86,7 @@ export default class LedgePlugin extends Plugin {
 
   async saveSettings(refresh = true, syncIcons = false): Promise<void> {
     syncSelectedDockPreset(this.settings);
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     if (syncIcons) await syncIconifyCache(this.externalIconIds());
     if (refresh) this.controller?.applySettings();
     await this.savePersistedData(false);
@@ -95,13 +100,13 @@ export default class LedgePlugin extends Plugin {
     if (dockId === this.settings.selectedDockId) {
       applyDockPreset(this.settings, dockId);
     }
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
   }
 
   async persistRuntimeSettings(): Promise<void> {
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     if (getDockPreset(this.settings, this.settings.selectedDockId)) {
       applyDockPreset(this.settings, this.settings.selectedDockId);
     }
@@ -111,7 +116,7 @@ export default class LedgePlugin extends Plugin {
   async selectDockPreset(dockId: string): Promise<boolean> {
     syncSelectedDockPreset(this.settings);
     if (!applyDockPreset(this.settings, dockId)) return false;
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     await this.savePersistedData();
     return true;
   }
@@ -119,7 +124,7 @@ export default class LedgePlugin extends Plugin {
   async createDockPreset(duplicateSelected = false): Promise<boolean> {
     const created = addDockPreset(this.settings, duplicateSelected);
     if (!created) return false;
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     await syncIconifyCache(this.externalIconIds());
     await this.savePersistedData();
     this.controller?.applySettings();
@@ -128,7 +133,7 @@ export default class LedgePlugin extends Plugin {
 
   async deleteSelectedDockPreset(): Promise<boolean> {
     if (!removeSelectedDockPreset(this.settings)) return false;
-    this.settings = normalizeSettings(this.settings);
+    this.settings = normalizeRuntimeSettings(this.settings);
     await syncIconifyCache(this.externalIconIds());
     await this.savePersistedData();
     this.controller?.applySettings();
