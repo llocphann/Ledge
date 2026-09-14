@@ -32,9 +32,9 @@ class PresetDockHost implements LedgeHost {
 }
 
 /**
- * Keeps one existing DockController per preset. Enabled presets render at the
- * same time, while disabled presets keep their hidden controller so vault
- * rename/create/delete events still maintain their saved target and icon paths.
+ * Keeps one DockController per enabled preset. Persisted path maintenance for
+ * disabled presets is handled centrally, so hidden Docks no longer need a DOM
+ * runtime or their own workspace/vault subscriptions.
  */
 export class MultiDockController extends Component {
   private readonly controllers = new Map<string, DockController>();
@@ -53,7 +53,9 @@ export class MultiDockController extends Component {
   }
 
   private reconcile(): void {
-    const desired = new Set(this.host.settings.docks.map((dock) => dock.id));
+    const desired = new Set(
+      this.host.settings.docks.filter((dock) => dock.enabled).map((dock) => dock.id),
+    );
 
     for (const [dockId, controller] of this.controllers) {
       if (desired.has(dockId)) continue;
@@ -62,7 +64,7 @@ export class MultiDockController extends Component {
     }
 
     for (const preset of this.host.settings.docks) {
-      if (this.controllers.has(preset.id)) continue;
+      if (!preset.enabled || this.controllers.has(preset.id)) continue;
       const controller = new DockController(new PresetDockHost(this.host, preset.id));
       this.controllers.set(preset.id, controller);
       this.addChild(controller);
