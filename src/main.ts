@@ -7,6 +7,7 @@ import {
   syncIconifyCache,
 } from "./icon-provider";
 import { MultiDockController } from "./multi-dock";
+import { SettingsStore } from "./services/settings-store";
 import {
   addDockPreset,
   applyDockPreset,
@@ -23,9 +24,15 @@ import type { DockPresetSettings, LedgeSettings } from "./types";
 export default class LedgePlugin extends Plugin {
   settings!: LedgeSettings;
   private controller: MultiDockController | null = null;
+  private persistenceStore!: SettingsStore<Record<string, unknown>>;
   private unloaded = false;
 
   async onload(): Promise<void> {
+    this.persistenceStore = new SettingsStore(
+      (data) => this.saveData(data),
+      { coalesceMs: 200 },
+    );
+
     const storedSettings: unknown = await this.loadData();
     restoreIconifyCache(storedSettings);
 
@@ -62,14 +69,17 @@ export default class LedgePlugin extends Plugin {
   onunload(): void {
     this.unloaded = true;
     this.controller = null;
+    void this.persistenceStore?.settle().catch((error: unknown) => {
+      console.error("[Ledge] Could not flush pending settings on unload", error);
+    });
   }
 
   async saveSettings(refresh = true, syncIcons = false): Promise<void> {
     syncSelectedDockPreset(this.settings);
     this.settings = normalizeSettings(this.settings);
     if (syncIcons) await syncIconifyCache(this.externalIconIds());
-    await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
+    await this.savePersistedData(false);
   }
 
   getDockPresetRuntime(dockId: string): DockPresetSettings | null {
@@ -130,11 +140,18 @@ export default class LedgePlugin extends Plugin {
     return this.settings.docks.flatMap((dock) => dock.items.map((item) => item.builtInIcon));
   }
 
-  private async savePersistedData(): Promise<void> {
-    await this.saveData({
+  private persistedSnapshot(): Record<string, unknown> {
+    return {
       ...this.settings,
       [ICON_CACHE_DATA_KEY]: exportIconifyCache(),
-    });
+    };
+  }
+
+  private savePersistedData(immediate = true): Promise<void> {
+    const snapshot = this.persistedSnapshot();
+    return immediate
+      ? this.persistenceStore.flush(snapshot)
+      : this.persistenceStore.schedule(snapshot);
   }
 
   private async syncExternalIcons(refresh: boolean): Promise<void> {
