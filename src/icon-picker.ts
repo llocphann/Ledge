@@ -9,7 +9,8 @@ import { cachedIconifyChoices, searchIconifyIcons } from "./icon-provider";
 
 const EMPTY_QUERY_LIMIT = 120;
 const LOCAL_SEARCH_LIMIT = 48;
-const TOTAL_SEARCH_LIMIT = 144;
+const TOTAL_SEARCH_LIMIT = 80;
+const REMOTE_SEARCH_DEBOUNCE_MS = 250;
 
 function matchesQuery(choice: BuiltInIconChoice, query: string): boolean {
   if (!query) return true;
@@ -42,6 +43,8 @@ function availableLocalIcons(query: string): BuiltInIconChoice[] {
 }
 
 class LedgeIconPickerModal extends SuggestModal<BuiltInIconChoice> {
+  private searchGeneration = 0;
+
   constructor(
     app: App,
     private readonly onChoose: (iconId: string) => void,
@@ -64,8 +67,14 @@ class LedgeIconPickerModal extends SuggestModal<BuiltInIconChoice> {
   }
 
   async getSuggestions(query: string): Promise<BuiltInIconChoice[]> {
+    const generation = ++this.searchGeneration;
     const local = availableLocalIcons(query);
     if (!query.trim()) return local;
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, REMOTE_SEARCH_DEBOUNCE_MS);
+    });
+    if (generation !== this.searchGeneration) return local;
 
     let external: BuiltInIconChoice[] = [];
     try {
@@ -73,6 +82,7 @@ class LedgeIconPickerModal extends SuggestModal<BuiltInIconChoice> {
     } catch {
       // Keep Obsidian and previously cached icons usable when the network is unavailable.
     }
+    if (generation !== this.searchGeneration) return local;
 
     const seen = new Set(local.map((choice) => choice.id));
     return [
