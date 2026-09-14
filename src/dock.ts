@@ -31,8 +31,15 @@ interface DragState {
   moved: boolean;
 }
 
+interface DocumentRuntimeContext {
+  leaf: WorkspaceLeaf | null;
+  file: TFile | null;
+  noteContext: NoteContext | null;
+}
+
 export class DockController extends Component {
   private readonly instances = new Map<Document, DockInstance>();
+  private readonly documentContexts = new Map<Document, DocumentRuntimeContext>();
   private refreshFrame: number | null = null;
 
   constructor(private readonly host: LedgeHost) {
@@ -40,35 +47,10 @@ export class DockController extends Component {
   }
 
   onload(): void {
-    const { workspace } = this.host.app;
-    this.registerEvent(workspace.on("layout-change", () => this.scheduleRefresh()));
-    this.registerEvent(workspace.on("active-leaf-change", () => this.scheduleRefresh()));
-    this.registerEvent(workspace.on("file-open", () => this.scheduleRefresh()));
-    this.registerEvent(this.host.app.metadataCache.on("changed", (file) => {
-      if (this.isActiveContextFile(file)) this.scheduleRefresh();
-    }));
-    this.registerEvent(workspace.on("window-open", (_workspaceWindow, openedWindow) => {
-      this.mountDocument(openedWindow.document);
-    }));
-    this.registerEvent(workspace.on("window-close", (_workspaceWindow, closedWindow) => {
-      this.unmountDocument(closedWindow.document);
-    }));
-    this.registerEvent(this.host.app.vault.on("create", (file) => {
-      this.refreshIfConfiguredPath(file.path);
-    }));
-    this.registerEvent(this.host.app.vault.on("modify", (file) => {
-      this.refreshIfConfiguredPath(file.path);
-    }));
-    this.registerEvent(this.host.app.vault.on("delete", (file) => {
-      this.refreshIfConfiguredPath(file.path);
-    }));
-    this.registerEvent(this.host.app.vault.on("rename", (file, oldPath) => {
-      void this.renameConfiguredPaths(file.path, oldPath);
-    }));
-
     this.register(() => {
       if (this.refreshFrame !== null) window.cancelAnimationFrame(this.refreshFrame);
       this.refreshFrame = null;
+      this.documentContexts.clear();
       this.instances.clear();
     });
 
@@ -77,9 +59,36 @@ export class DockController extends Component {
   }
 
   applySettings(): void {
+    this.documentContexts.clear();
     this.mountAllDocuments();
     for (const instance of this.instances.values()) instance.render();
     this.scheduleRefresh();
+  }
+
+  refreshWorkspaceState(): void {
+    this.documentContexts.clear();
+    this.scheduleRefresh();
+  }
+
+  handleMetadataChange(file: TFile): void {
+    if (!this.isActiveContextFile(file)) return;
+    this.documentContexts.clear();
+    this.scheduleRefresh();
+  }
+
+  handleWindowOpen(document: Document): void {
+    this.documentContexts.delete(document);
+    this.mountDocument(document);
+    this.scheduleRefresh();
+  }
+
+  handleWindowClose(document: Document): void {
+    this.documentContexts.delete(document);
+    this.unmountDocument(document);
+  }
+
+  handleVaultPathChange(path: string): void {
+    this.refreshIfConfiguredPath(path);
   }
 
   settings(): LedgeSettings {
@@ -91,16 +100,7 @@ export class DockController extends Component {
   }
 
   contextForDocument(document: Document): NoteContext | null {
-    const leaf = this.leafForDocument(document);
-    const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
-    if (!(candidate instanceof TFile)) return null;
-    const cache = this.host.app.metadataCache.getFileCache(candidate);
-    return {
-      path: candidate.path,
-      name: candidate.name,
-      basename: candidate.basename,
-      tags: cache ? getAllTags(cache) || [] : [],
-    };
+    return this.runtimeContextForDocument(document).noteContext;
   }
 
   dockVisible(document: Document): boolean {
@@ -121,14 +121,7 @@ export class DockController extends Component {
   }
 
   leafForDocument(document: Document): WorkspaceLeaf | null {
-    const recentLeaf = this.host.app.workspace.getMostRecentLeaf();
-    if (this.isRootLeafForDocument(recentLeaf, document)) return recentLeaf;
-
-    let result: WorkspaceLeaf | null = null;
-    this.host.app.workspace.iterateAllLeaves((leaf) => {
-      if (!result && this.isRootLeafForDocument(leaf, document)) result = leaf;
-    });
-    return result;
+    return this.runtimeContextForDocument(document).leaf;
   }
 
   async openTarget(document: Document, itemId: string): Promise<void> {
@@ -157,42 +150,39 @@ export class DockController extends Component {
     this.applySettings();
   }
 
-  private async renameConfiguredPaths(newPath: string, oldPath: string): Promise<void> {
-    const rename = (value: string): string =>
-      value === oldPath || value.startsWith(`${oldPath}/`)
-        ? newPath + value.slice(oldPath.length)
-        : value;
-    let changed = false;
-    for (const rule of [...this.host.settings.includeRules, ...this.host.settings.excludeRules]) {
-      if (rule.matchType !== "path" && rule.matchType !== "folder") continue;
-      const value = rename(rule.matchValue);
-      if (value === rule.matchValue) continue;
-      rule.matchValue = value;
-      changed = true;
-    }
-    for (const item of this.host.settings.items) {
-      const target = rename(item.target);
-      if (target !== item.target) {
-        item.target = target;
-        changed = true;
-      }
+  private runtimeContextForDocument(document: Document): DocumentRuntimeContext {
+    const cached = this.documentContexts.get(document);
+    if (cached) return cached;
 
-      const rememberedIcon = rename(item.vaultIconPath);
-      if (rememberedIcon !== item.vaultIconPath) {
-        item.vaultIconPath = rememberedIcon;
-        if (item.iconSource === "vault") item.icon = rememberedIcon;
-        changed = true;
-      }
-    }
-    if (changed) await this.host.saveSettings(false);
-    this.applySettings();
+    const leaf = this.computeLeafForDocument(document);
+    const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
+    const file = candidate instanceof TFile ? candidate : null;
+    const cache = file ? this.host.app.metadataCache.getFileCache(file) : null;
+    const noteContext = file ? {
+      path: file.path,
+      name: file.name,
+      basename: file.basename,
+      tags: cache ? getAllTags(cache) || [] : [],
+    } : null;
+    const context = { leaf, file, noteContext };
+    this.documentContexts.set(document, context);
+    return context;
+  }
+
+  private computeLeafForDocument(document: Document): WorkspaceLeaf | null {
+    const recentLeaf = this.host.app.workspace.getMostRecentLeaf();
+    if (this.isRootLeafForDocument(recentLeaf, document)) return recentLeaf;
+
+    let result: WorkspaceLeaf | null = null;
+    this.host.app.workspace.iterateAllLeaves((leaf) => {
+      if (!result && this.isRootLeafForDocument(leaf, document)) result = leaf;
+    });
+    return result;
   }
 
   private isActiveContextFile(file: TFile): boolean {
     for (const document of this.instances.keys()) {
-      const leaf = this.leafForDocument(document);
-      const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
-      if (candidate instanceof TFile && candidate.path === file.path) return true;
+      if (this.runtimeContextForDocument(document).file?.path === file.path) return true;
     }
     return false;
   }
@@ -241,6 +231,7 @@ export class DockController extends Component {
     if (!instance) return;
     this.removeChild(instance);
     this.instances.delete(document);
+    this.documentContexts.delete(document);
   }
 
   private scheduleRefresh(): void {
