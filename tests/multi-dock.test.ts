@@ -71,16 +71,19 @@ void test("About stays at the bottom and uses manifest metadata", () => {
   assert.match(source, /name: "Author"[\s\S]*this\.ledgePlugin\.manifest\.author/);
 });
 
-void test("all Dock positions anchor to the active workspace content area", () => {
+void test("all Dock positions anchor through the shared active workspace context", () => {
   const source = fs.readFileSync("src/dock.ts", "utf8");
+  const registry = fs.readFileSync("src/runtime/document-registry.ts", "utf8");
 
   assert.match(source, /private activeWorkspaceContent/);
-  assert.match(source, /contentEl\?: HTMLElement/);
-  assert.match(source, /querySelector<HTMLElement>\("\.view-content"\)/);
+  assert.match(source, /this\.controller\.contentForDocument\(this\.document\)/);
+  assert.match(registry, /contentEl: HTMLElement \| null/);
+  assert.match(registry, /querySelector<HTMLElement>\("\.view-content"\)/);
   assert.match(source, /const viewContent = this\.activeWorkspaceContent\(leaf, leafContainer\)/);
   assert.match(source, /private anchorRectForPosition\([\s\S]*_position: DockPosition/);
   assert.match(source, /this\.positionTrigger\(rect, position/);
   assert.match(source, /ResizeObserver/);
+  assert.doesNotMatch(source, /iterateAllLeaves/);
 });
 
 void test("corner triggers keep their geometry while using one continuous surface", () => {
@@ -183,14 +186,16 @@ void test("duplicating a dock preserves every feature setting without sharing mu
   assert.equal(source.includeRules[0]!.matchValue, "work");
 });
 
-void test("multi-dock runtime reuses the complete single-dock controller", () => {
+void test("multi-dock runtime shares context and global event ownership", () => {
   const source = fs.readFileSync("src/multi-dock.ts", "utf8");
   const runtime = fs.readFileSync("src/runtime/runtime-coordinator.ts", "utf8");
 
-  assert.match(source, /new DockController\(new PresetDockHost/);
+  assert.match(source, /new DocumentRegistry\(host\.app\)/);
+  assert.match(source, /new DockController\([\s\S]*new PresetDockHost\(this\.host, preset\.id, this\.documentRegistry\)/);
   assert.match(source, /new RuntimeCoordinator/);
   assert.match(source, /controller\.applySettings\(\)/);
   assert.match(runtime, /workspace\.on\("layout-change"/);
+  assert.match(runtime, /documentRegistry\.invalidateWorkspace\(\)/);
   assert.doesNotMatch(source, /setInterval\(|MutationObserver/);
 });
 
