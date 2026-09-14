@@ -3,7 +3,6 @@ import {
   Component,
   Notice,
   TFile,
-  getAllTags,
   getIcon,
   normalizePath,
   setIcon,
@@ -11,15 +10,22 @@ import {
 } from "obsidian";
 import { dockVisibleForContext, type NoteContext } from "./context-rules";
 import { computeCornerLayout, isCornerPosition, isVerticalPosition } from "./layout";
+import {
+  classifyDockChanges,
+  type DockDirtyDomain,
+} from "./runtime/dock-dirty-domains";
+import { DocumentRegistry } from "./runtime/document-registry";
+import { TargetResolutionIndex } from "./runtime/target-resolution-index";
 import type {
   DockItemSettings,
   DockPosition,
-  LedgeSettings,
+  DockSettings,
 } from "./types";
 
 export interface LedgeHost {
   app: App;
-  settings: LedgeSettings;
+  settings: DockSettings;
+  documentRegistry: DocumentRegistry;
   saveSettings(refresh?: boolean): Promise<void>;
 }
 
@@ -31,15 +37,10 @@ interface DragState {
   moved: boolean;
 }
 
-interface DocumentRuntimeContext {
-  leaf: WorkspaceLeaf | null;
-  file: TFile | null;
-  noteContext: NoteContext | null;
-}
-
 export class DockController extends Component {
   private readonly instances = new Map<Document, DockInstance>();
-  private readonly documentContexts = new Map<Document, DocumentRuntimeContext>();
+  private readonly targetIndex = new TargetResolutionIndex<TFile | null>();
+  private previousSettings: DockSettings | null = null;
   private refreshFrame: number | null = null;
 
   constructor(private readonly host: LedgeHost) {
@@ -50,48 +51,56 @@ export class DockController extends Component {
     this.register(() => {
       if (this.refreshFrame !== null) window.cancelAnimationFrame(this.refreshFrame);
       this.refreshFrame = null;
-      this.documentContexts.clear();
+      this.targetIndex.invalidateAll();
       this.instances.clear();
     });
 
     this.mountAllDocuments();
+    this.previousSettings = structuredClone(this.settings());
     this.scheduleRefresh();
   }
 
   applySettings(): void {
-    this.documentContexts.clear();
+    const settings = this.settings();
+    const dirty = classifyDockChanges(this.previousSettings, settings);
+    this.previousSettings = structuredClone(settings);
     this.mountAllDocuments();
-    for (const instance of this.instances.values()) instance.render();
+    if (dirty.size > 0) {
+      for (const instance of this.instances.values()) instance.applyChanges(dirty);
+    }
     this.scheduleRefresh();
   }
 
+  refreshIcons(): void {
+    const dirty = new Set<DockDirtyDomain>(["ICONS"]);
+    for (const instance of this.instances.values()) instance.applyChanges(dirty);
+  }
+
   refreshWorkspaceState(): void {
-    this.documentContexts.clear();
     this.scheduleRefresh();
   }
 
   handleMetadataChange(file: TFile): void {
+    this.targetIndex.invalidateAll();
     if (!this.isActiveContextFile(file)) return;
-    this.documentContexts.clear();
     this.scheduleRefresh();
   }
 
   handleWindowOpen(document: Document): void {
-    this.documentContexts.delete(document);
     this.mountDocument(document);
     this.scheduleRefresh();
   }
 
   handleWindowClose(document: Document): void {
-    this.documentContexts.delete(document);
     this.unmountDocument(document);
   }
 
   handleVaultPathChange(path: string): void {
+    this.targetIndex.invalidateAll();
     this.refreshIfConfiguredPath(path);
   }
 
-  settings(): LedgeSettings {
+  settings(): DockSettings {
     return this.host.settings;
   }
 
@@ -100,7 +109,7 @@ export class DockController extends Component {
   }
 
   contextForDocument(document: Document): NoteContext | null {
-    return this.runtimeContextForDocument(document).noteContext;
+    return this.host.documentRegistry.context(document).noteContext;
   }
 
   dockVisible(document: Document): boolean {
@@ -112,22 +121,26 @@ export class DockController extends Component {
     );
   }
 
-  resolveTarget(target: string): TFile | null {
-    const normalized = normalizePath(target.trim());
-    if (!normalized) return null;
-    const exact = this.host.app.vault.getFileByPath(normalized);
-    if (exact) return exact;
-    return this.host.app.metadataCache.getFirstLinkpathDest(target, "") || null;
+  resolveItemTarget(item: DockItemSettings): TFile | null {
+    return this.targetIndex.resolve(
+      item.id,
+      item.target,
+      (target) => this.resolveTargetPath(target),
+    );
   }
 
   leafForDocument(document: Document): WorkspaceLeaf | null {
-    return this.runtimeContextForDocument(document).leaf;
+    return this.host.documentRegistry.context(document).leaf;
+  }
+
+  contentForDocument(document: Document): HTMLElement | null {
+    return this.host.documentRegistry.context(document).contentEl;
   }
 
   async openTarget(document: Document, itemId: string): Promise<void> {
     const item = this.host.settings.items.find((candidate) => candidate.id === itemId);
     if (!item) return;
-    const file = this.resolveTarget(item.target);
+    const file = this.resolveItemTarget(item);
     if (!file) {
       new Notice(`Ledge could not find: ${item.target || item.label}`);
       return;
@@ -150,39 +163,17 @@ export class DockController extends Component {
     this.applySettings();
   }
 
-  private runtimeContextForDocument(document: Document): DocumentRuntimeContext {
-    const cached = this.documentContexts.get(document);
-    if (cached) return cached;
-
-    const leaf = this.computeLeafForDocument(document);
-    const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
-    const file = candidate instanceof TFile ? candidate : null;
-    const cache = file ? this.host.app.metadataCache.getFileCache(file) : null;
-    const noteContext = file ? {
-      path: file.path,
-      name: file.name,
-      basename: file.basename,
-      tags: cache ? getAllTags(cache) || [] : [],
-    } : null;
-    const context = { leaf, file, noteContext };
-    this.documentContexts.set(document, context);
-    return context;
-  }
-
-  private computeLeafForDocument(document: Document): WorkspaceLeaf | null {
-    const recentLeaf = this.host.app.workspace.getMostRecentLeaf();
-    if (this.isRootLeafForDocument(recentLeaf, document)) return recentLeaf;
-
-    let result: WorkspaceLeaf | null = null;
-    this.host.app.workspace.iterateAllLeaves((leaf) => {
-      if (!result && this.isRootLeafForDocument(leaf, document)) result = leaf;
-    });
-    return result;
+  private resolveTargetPath(target: string): TFile | null {
+    const normalized = normalizePath(target.trim());
+    if (!normalized) return null;
+    const exact = this.host.app.vault.getFileByPath(normalized);
+    if (exact) return exact;
+    return this.host.app.metadataCache.getFirstLinkpathDest(target, "") || null;
   }
 
   private isActiveContextFile(file: TFile): boolean {
     for (const document of this.instances.keys()) {
-      if (this.runtimeContextForDocument(document).file?.path === file.path) return true;
+      if (this.host.documentRegistry.context(document).file?.path === file.path) return true;
     }
     return false;
   }
@@ -194,21 +185,8 @@ export class DockController extends Component {
     if (configured) this.applySettings();
   }
 
-  private isRootLeafForDocument(leaf: WorkspaceLeaf | null, document: Document): boolean {
-    const container = leaf?.view?.containerEl;
-    return container?.ownerDocument === document
-      && Boolean(container.closest(".workspace-split.mod-root"));
-  }
-
   private mountAllDocuments(): void {
-    const documents = new Set<Document>();
-    const workspaceDocument = this.host.app.workspace.containerEl.ownerDocument;
-    documents.add(workspaceDocument);
-    this.host.app.workspace.iterateAllLeaves((leaf) => {
-      const document = leaf.view?.containerEl?.ownerDocument;
-      if (document) documents.add(document);
-    });
-
+    const documents = new Set(this.host.documentRegistry.documents());
     for (const document of documents) this.mountDocument(document);
     for (const document of this.instances.keys()) {
       if (!documents.has(document) || !document.defaultView) this.unmountDocument(document);
@@ -231,7 +209,6 @@ export class DockController extends Component {
     if (!instance) return;
     this.removeChild(instance);
     this.instances.delete(document);
-    this.documentContexts.delete(document);
   }
 
   private scheduleRefresh(): void {
@@ -300,12 +277,64 @@ class DockInstance extends Component {
 
   render(): void {
     const settings = this.controller.settings();
+    const autoHideJustEnabled = this.updateShell(settings);
+    this.rebuildItems(settings);
+    this.applyLayout(settings.position);
+    this.clearMagnification();
+    if (!this.syncVisibility()) return;
+    if (!settings.autoHide) this.setVisible(true);
+    else if (autoHideJustEnabled) this.setVisible(false);
+    else this.setVisible(this.visible);
+    this.refreshGeometryAndActiveState();
+  }
+
+  applyChanges(dirty: ReadonlySet<DockDirtyDomain>): void {
+    if (!this.isMounted() || dirty.size === 0) return;
+    const settings = this.controller.settings();
+    const shellChanged = dirty.has("STYLE") || dirty.has("VISIBILITY") || dirty.has("POSITION");
+    const autoHideJustEnabled = shellChanged ? this.updateShell(settings) : false;
+
+    if (dirty.has("ITEMS")) {
+      this.rebuildItems(settings);
+      this.applyLayout(settings.position);
+      this.clearMagnification();
+    } else if (dirty.has("ICONS")) {
+      this.refreshItemIcons(settings);
+    }
+
+    if (dirty.has("POSITION") && !dirty.has("ITEMS")) this.applyLayout(settings.position);
+
+    if (dirty.has("VISIBILITY")) {
+      if (!this.syncVisibility()) return;
+      if (!settings.autoHide) this.setVisible(true);
+      else if (autoHideJustEnabled) this.setVisible(false);
+      else this.setVisible(this.visible);
+    }
+
+    if (dirty.has("GEOMETRY")
+      || dirty.has("POSITION")
+      || dirty.has("ITEMS")
+      || dirty.has("ICONS")) {
+      this.refreshGeometryAndActiveState();
+    }
+  }
+
+  refreshGeometryAndActiveState(): void {
+    if (!this.isMounted() || !this.syncVisibility()) return;
+    if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
+    this.ensureWorkspaceHost();
+    this.bindGeometryObserver();
+    this.positionAgainstRootPane();
+    this.markActiveTarget();
+  }
+
+  private updateShell(settings: DockSettings): boolean {
     const autoHideChanged = this.previousAutoHide !== null
       && this.previousAutoHide !== settings.autoHide;
     const autoHideJustEnabled = autoHideChanged && settings.autoHide;
     this.previousAutoHide = settings.autoHide;
     if (autoHideChanged) this.clearTimers();
-    this.renderVersion += 1;
+
     this.root.dataset.position = settings.position;
     this.root.classList.toggle("is-auto-hide", settings.autoHide);
     this.root.classList.toggle("is-labels-hidden", !settings.showLabels);
@@ -320,32 +349,37 @@ class DockInstance extends Component {
       !settings.triggerAreaShowBackground,
     );
     this.root.classList.toggle("is-trigger-area-border-hidden", !settings.triggerAreaShowBorder);
-
     this.setRootVariables(settings);
+    return autoHideJustEnabled;
+  }
+
+  private rebuildItems(settings: DockSettings): void {
+    this.renderVersion += 1;
     this.panel.replaceChildren();
     for (const item of settings.items.filter((candidate) => candidate.enabled)) {
       this.createButton(item, this.renderVersion);
     }
-
-    this.applyLayout(settings.position);
-    this.clearMagnification();
-    if (!this.syncVisibility()) return;
-    if (!settings.autoHide) this.setVisible(true);
-    else if (autoHideJustEnabled) this.setVisible(false);
-    else this.setVisible(this.visible);
-    this.refreshGeometryAndActiveState();
   }
 
-  refreshGeometryAndActiveState(): void {
-    if (!this.isMounted() || !this.syncVisibility()) return;
-    if (!this.controller.settings().autoHide && !this.visible) this.setVisible(true);
-    this.ensureWorkspaceHost();
-    this.bindGeometryObserver();
-    this.positionAgainstRootPane();
-    this.markActiveTarget();
+  private refreshItemIcons(settings: DockSettings): void {
+    this.renderVersion += 1;
+    const version = this.renderVersion;
+    const items = new Map(settings.items.map((item) => [item.id, item]));
+    for (const button of this.panel.querySelectorAll<HTMLButtonElement>(".ledge-dock-item")) {
+      const item = items.get(button.dataset.itemId || "");
+      if (!item) continue;
+      this.applyItemVisualStyles(button, item);
+      const icon = button.querySelector<HTMLElement>(".ledge-dock-icon");
+      if (!icon) continue;
+      icon.replaceChildren();
+      icon.classList.remove("is-missing-icon");
+      const iconSize = item.iconSize > 0 ? item.iconSize : settings.iconSize;
+      icon.style.setProperty("--ledge-current-icon-size", `${iconSize}px`);
+      this.renderIcon(icon, item, version);
+    }
   }
 
-  private setRootVariables(settings: LedgeSettings): void {
+  private setRootVariables(settings: DockSettings): void {
     const style = this.root.style;
     style.setProperty("--ledge-item-size", `${settings.itemSize}px`);
     style.setProperty("--ledge-icon-size", `${settings.iconSize}px`);
@@ -436,14 +470,7 @@ class DockInstance extends Component {
     button.dataset.target = item.target;
     button.setAttribute("aria-label", item.label || item.target || "Dock item");
     button.setAttribute("aria-keyshortcuts", "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight");
-
-    if (item.iconColor) button.style.setProperty("--ledge-item-icon-color", item.iconColor);
-    if (item.tileGradientStart) {
-      button.style.setProperty("--ledge-item-gradient-start", item.tileGradientStart);
-    }
-    if (item.tileGradientEnd) {
-      button.style.setProperty("--ledge-item-gradient-end", item.tileGradientEnd);
-    }
+    this.applyItemVisualStyles(button, item);
 
     const icon = button.createSpan();
     icon.className = "ledge-dock-icon";
@@ -455,11 +482,24 @@ class DockInstance extends Component {
     const label = button.createSpan();
     label.className = "ledge-dock-label";
     label.textContent = item.label || item.target || "Untitled";
-    if (!this.controller.resolveTarget(item.target)) {
+    if (!this.controller.resolveItemTarget(item)) {
       button.classList.add("is-missing-target");
       button.title = `Missing target: ${item.target || "No path configured"}`;
     }
     return button;
+  }
+
+  private applyItemVisualStyles(button: HTMLButtonElement, item: DockItemSettings): void {
+    button.style.removeProperty("--ledge-item-icon-color");
+    button.style.removeProperty("--ledge-item-gradient-start");
+    button.style.removeProperty("--ledge-item-gradient-end");
+    if (item.iconColor) button.style.setProperty("--ledge-item-icon-color", item.iconColor);
+    if (item.tileGradientStart) {
+      button.style.setProperty("--ledge-item-gradient-start", item.tileGradientStart);
+    }
+    if (item.tileGradientEnd) {
+      button.style.setProperty("--ledge-item-gradient-end", item.tileGradientEnd);
+    }
   }
 
   private renderIcon(iconEl: HTMLElement, item: DockItemSettings, version: number): void {
@@ -538,13 +578,10 @@ class DockInstance extends Component {
   }
 
   private activeWorkspaceContent(
-    leaf: WorkspaceLeaf | null,
-    leafContainer: HTMLElement | undefined,
+    _leaf: WorkspaceLeaf | null,
+    _leafContainer: HTMLElement | undefined,
   ): HTMLElement | null {
-    return (leaf?.view as { contentEl?: HTMLElement } | undefined)?.contentEl
-      ?? leafContainer?.querySelector<HTMLElement>(".view-content")
-      ?? leafContainer
-      ?? null;
+    return this.controller.contentForDocument(this.document);
   }
 
   private ensureWorkspaceHost(): void {
@@ -673,17 +710,17 @@ class DockInstance extends Component {
   }
 
   private markActiveTarget(): void {
-    const leaf = this.controller.leafForDocument(this.document);
-    const candidate: unknown = (leaf?.view as { file?: unknown } | undefined)?.file;
-    const activeFile = candidate instanceof TFile ? candidate : null;
+    const activeFile = this.controller.leafForDocument(this.document)?.view;
+    const candidate: unknown = (activeFile as { file?: unknown } | undefined)?.file;
+    const currentFile = candidate instanceof TFile ? candidate : null;
     const buttons = Array.from(
       this.panel.querySelectorAll<HTMLButtonElement>(".ledge-dock-item"),
     );
     for (const button of buttons) {
       const itemId = button.dataset.itemId || "";
-      const item = this.controller.settings().items.find((candidate) => candidate.id === itemId);
-      const target = item ? this.controller.resolveTarget(item.target) : null;
-      const active = Boolean(activeFile && target && activeFile.path === target.path);
+      const item = this.controller.settings().items.find((candidateItem) => candidateItem.id === itemId);
+      const target = item ? this.controller.resolveItemTarget(item) : null;
+      const active = Boolean(currentFile && target && currentFile.path === target.path);
       button.classList.toggle("is-active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
