@@ -1,5 +1,6 @@
 import { Component, type App } from "obsidian";
 import { DockController, type LedgeHost } from "./dock";
+import { RuntimeCoordinator } from "./runtime/runtime-coordinator";
 import type { DockPresetSettings, LedgeSettings } from "./types";
 
 export interface MultiDockHost {
@@ -7,6 +8,7 @@ export interface MultiDockHost {
   settings: LedgeSettings;
   getDockPresetRuntime(dockId: string): DockPresetSettings | null;
   saveDockPresetRuntime(dockId: string, refresh?: boolean): Promise<void>;
+  persistRuntimeSettings(): Promise<void>;
 }
 
 class PresetDockHost implements LedgeHost {
@@ -32,9 +34,10 @@ class PresetDockHost implements LedgeHost {
 }
 
 /**
- * Keeps one DockController per enabled preset. Persisted path maintenance for
- * disabled presets is handled centrally, so hidden Docks no longer need a DOM
- * runtime or their own workspace/vault subscriptions.
+ * Keeps one DockController per enabled preset. A single RuntimeCoordinator owns
+ * global Obsidian subscriptions and dispatches changes to those document-local
+ * runtimes. Disabled presets remain data-only and still participate in shared
+ * path maintenance.
  */
 export class MultiDockController extends Component {
   private readonly controllers = new Map<string, DockController>();
@@ -45,6 +48,12 @@ export class MultiDockController extends Component {
 
   onload(): void {
     this.reconcile();
+    this.addChild(new RuntimeCoordinator({
+      app: this.host.app,
+      getSettings: () => this.host.settings,
+      dockRuntimes: () => this.controllers.entries(),
+      persistRuntimeSettings: () => this.host.persistRuntimeSettings(),
+    }));
   }
 
   applySettings(): void {
