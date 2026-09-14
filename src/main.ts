@@ -1,5 +1,4 @@
 import { Notice, Plugin } from "obsidian";
-import { renameRememberedVaultIconPaths } from "./dock-paths";
 import { ICON_CACHE_DATA_KEY } from "./icon-cache";
 import { LedgeIconLibrarySettingTab } from "./icon-library-setting-tab";
 import {
@@ -8,6 +7,7 @@ import {
   syncIconifyCache,
 } from "./icon-provider";
 import { MultiDockController } from "./multi-dock";
+import { maintainRenamedVaultPaths } from "./services/path-maintenance";
 import {
   addDockPreset,
   applyDockPreset,
@@ -37,12 +37,19 @@ export default class LedgePlugin extends Plugin {
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
 
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
-      if (!renameRememberedVaultIconPaths(this.settings, file.path, oldPath)) return;
-      applyDockPreset(this.settings, this.settings.selectedDockId);
-      void this.saveSettings(false);
+      const result = maintainRenamedVaultPaths(this.settings, file.path, oldPath);
+      if (!result.changed) return;
+      if (result.affectedDockIds.includes(this.settings.selectedDockId)) {
+        applyDockPreset(this.settings, this.settings.selectedDockId);
+      }
+      void this.persistRuntimeSettings().catch((error: unknown) => {
+        console.error("[Ledge] Could not persist renamed Dock paths", error);
+      });
     }));
 
-    void this.syncExternalIcons(true);
+    void this.syncExternalIcons(true).catch((error: unknown) => {
+      console.error("[Ledge] Could not synchronize external icons", error);
+    });
 
     this.addCommand({
       id: "toggle-dock",
@@ -50,7 +57,9 @@ export default class LedgePlugin extends Plugin {
       callback: () => {
         this.settings.enabled = !this.settings.enabled;
         const presetName = getDockPreset(this.settings, this.settings.selectedDockId)?.name ?? "Dock";
-        void this.saveSettings();
+        void this.saveSettings().catch((error: unknown) => {
+          console.error("[Ledge] Could not save selected Dock state", error);
+        });
         new Notice(`${presetName} ${this.settings.enabled ? "enabled" : "hidden"}`);
       },
     });
@@ -86,6 +95,14 @@ export default class LedgePlugin extends Plugin {
     this.settings = normalizeSettings(this.settings);
     await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
+  }
+
+  async persistRuntimeSettings(): Promise<void> {
+    this.settings = normalizeSettings(this.settings);
+    if (getDockPreset(this.settings, this.settings.selectedDockId)) {
+      applyDockPreset(this.settings, this.settings.selectedDockId);
+    }
+    await this.savePersistedData();
   }
 
   async selectDockPreset(dockId: string): Promise<boolean> {
@@ -134,6 +151,7 @@ export default class LedgePlugin extends Plugin {
 
   private async syncExternalIcons(refresh: boolean): Promise<void> {
     const changed = await syncIconifyCache(this.externalIconIds());
+    if (this.unloaded) return;
     if (changed) await this.savePersistedData();
     if (refresh) this.controller?.applySettings();
   }
