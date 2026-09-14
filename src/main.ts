@@ -158,6 +158,6 @@ export default class LedgePlugin extends Plugin {
     const changed = await syncIconifyCache(this.externalIconIds());
     if (this.unloaded) return;
     if (changed) await this.savePersistedData();
-    if (refresh) this.controller?.applySettings();
+    if (refresh) this.controller?.refreshIcons();
   }
 }
