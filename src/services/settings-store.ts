@@ -1,13 +1,17 @@
+export interface SettingsTimerHost {
+  setTimeout(callback: () => void, delay: number): unknown;
+  clearTimeout(handle: unknown): void;
+}
+
 export interface SettingsStoreOptions {
   coalesceMs?: number;
+  timerHost?: SettingsTimerHost;
 }
 
 interface Waiter {
   resolve: () => void;
   reject: (error: unknown) => void;
 }
-
-const timerHost = typeof window === "undefined" ? globalThis : window;
 
 /**
  * Serializes persistence writes and coalesces bursts of non-structural changes.
@@ -16,8 +20,9 @@ const timerHost = typeof window === "undefined" ? globalThis : window;
  */
 export class SettingsStore<T> {
   private readonly coalesceMs: number;
+  private readonly timerHost: SettingsTimerHost;
   private pendingValue: T | undefined;
-  private timer: ReturnType<typeof globalThis.setTimeout> | null = null;
+  private timer: unknown | null = null;
   private waiters: Waiter[] = [];
   private writeChain: Promise<void> = Promise.resolve();
 
@@ -26,16 +31,20 @@ export class SettingsStore<T> {
     options: SettingsStoreOptions = {},
   ) {
     this.coalesceMs = options.coalesceMs ?? 200;
+    this.timerHost = options.timerHost ?? {
+      setTimeout: (callback, delay) => window.setTimeout(callback, delay),
+      clearTimeout: (handle) => window.clearTimeout(handle as number),
+    };
   }
 
   schedule(value: T): Promise<void> {
     this.pendingValue = value;
-    if (this.timer !== null) timerHost.clearTimeout(this.timer);
+    if (this.timer !== null) this.timerHost.clearTimeout(this.timer);
 
     const completion = new Promise<void>((resolve, reject) => {
       this.waiters.push({ resolve, reject });
     });
-    this.timer = timerHost.setTimeout(() => {
+    this.timer = this.timerHost.setTimeout(() => {
       this.timer = null;
       void this.flushPending();
     }, this.coalesceMs);
@@ -45,7 +54,7 @@ export class SettingsStore<T> {
   flush(value?: T): Promise<void> {
     if (value !== undefined) this.pendingValue = value;
     if (this.timer !== null) {
-      timerHost.clearTimeout(this.timer);
+      this.timerHost.clearTimeout(this.timer);
       this.timer = null;
     }
     return this.flushPending();
