@@ -971,6 +971,10 @@
   padding-right: 0;
 }
 
+.ledge-settings-panel-items .setting-item.ledge-add-item-row {
+  padding-bottom: 0;
+}
+
 .ledge-settings-panel-items .setting-item-control input[type="text"] {
   width: min(320px, 46vw);
 }
