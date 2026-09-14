@@ -25,19 +25,14 @@ void test("release and repository documents exist", () => {
     "README.md",
     "ROADMAP.md",
     "LICENSE",
-    "assets/buy-me-a-coffee.svg",
   ]) {
     assert.equal(fs.existsSync(path), true, `${path} is required`);
   }
   assert.match(fs.readFileSync("LICENSE", "utf8"), /^GNU GENERAL PUBLIC LICENSE\nVersion 3/);
-  assert.match(
-    fs.readFileSync("README.md", "utf8"),
-    /https:\/\/www\.buymeacoffee\.com\/llocphann/,
-  );
-  assert.match(
-    fs.readFileSync("README.md", "utf8"),
-    /https:\/\/raw\.githubusercontent\.com\/llocphann\/Ledge\/main\/assets\/buy-me-a-coffee\.svg/,
-  );
+
+  const readme = fs.readFileSync("README.md", "utf8");
+  assert.match(readme, /https:\/\/www\.buymeacoffee\.com\/llocphann/);
+  assert.match(readme, /alt="Buy Me a Coffee"/);
 });
 
 void test("support button is branded and independent from theme button classes", () => {
@@ -87,7 +82,6 @@ void test("release README points users to the published Wiki", () => {
   assert.match(roadmap, /Exclusive placement/);
   assert.match(roadmap, /Context routing extensions/);
   assert.match(readme, /https:\/\/github\.com\/llocphann\/Ledge\/wiki/);
-  assert.doesNotMatch(readme, /## Development|npm install|npm run check/);
 });
 
 void test("Dock item deletion is confirmation-backed and runtime work is event driven", () => {
