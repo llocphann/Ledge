@@ -103,12 +103,16 @@ void test("enabling auto-hide hides an already-visible Dock immediately", () => 
   assert.match(source, /else if \(autoHideJustEnabled\) this\.setVisible\(false\)/);
 });
 
-void test("vault icon renames update the remembered path even while built-in is active", () => {
-  const source = fs.readFileSync("src/dock.ts", "utf8");
+void test("vault path maintenance updates remembered icons without hidden Dock runtimes", () => {
+  const maintenance = fs.readFileSync("src/services/path-maintenance.ts", "utf8");
+  const multiDock = fs.readFileSync("src/multi-dock.ts", "utf8");
 
-  assert.match(source, /const rememberedIcon = rename\(item\.vaultIconPath\)/);
-  assert.match(source, /item\.vaultIconPath = rememberedIcon/);
-  assert.match(source, /if \(item\.iconSource === "vault"\) item\.icon = rememberedIcon/);
+  assert.match(maintenance, /for \(const dock of settings\.docks\)/);
+  assert.match(maintenance, /renamePath\(item\.vaultIconPath, newPath, oldPath\)/);
+  assert.match(maintenance, /item\.vaultIconPath = rememberedIcon/);
+  assert.match(maintenance, /if \(item\.iconSource === "vault"\)/);
+  assert.match(multiDock, /filter\(\(dock\) => dock\.enabled\)/);
+  assert.doesNotMatch(multiDock, /disabled presets retain a hidden controller/i);
 });
 
 void test("disabled docks still reserve their exclusive position", () => {
@@ -181,9 +185,12 @@ void test("duplicating a dock preserves every feature setting without sharing mu
 
 void test("multi-dock runtime reuses the complete single-dock controller", () => {
   const source = fs.readFileSync("src/multi-dock.ts", "utf8");
+  const runtime = fs.readFileSync("src/runtime/runtime-coordinator.ts", "utf8");
 
   assert.match(source, /new DockController\(new PresetDockHost/);
+  assert.match(source, /new RuntimeCoordinator/);
   assert.match(source, /controller\.applySettings\(\)/);
+  assert.match(runtime, /workspace\.on\("layout-change"/);
   assert.doesNotMatch(source, /setInterval\(|MutationObserver/);
 });
 
