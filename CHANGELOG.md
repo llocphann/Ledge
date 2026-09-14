@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.3.0
+
+- Centralize workspace, metadata, window, and vault subscriptions in one runtime coordinator instead of registering a full global event set for every Dock.
+- Keep disabled Dock presets data-only while maintaining renamed targets, visibility paths, and remembered vault icons through one shared path-maintenance transaction.
+- Share one document/leaf/context registry across simultaneous Docks so workspace traversal and active-note context resolution are no longer repeated per Dock.
+- Add dirty-domain rendering so style, geometry, visibility, item, icon, and position changes update only the affected runtime work instead of rebuilding every Dock item for unrelated settings changes.
+- Cache target resolution by stable item identity and invalidate it on relevant vault or metadata changes, reducing repeated link-path resolution during active-state refreshes.
+- Serialize plugin-data writes and coalesce bursts of non-structural settings changes while keeping structural operations immediately durable.
+- Bound Iconify searches to smaller result sets, debounce remote queries, discard stale results, and deduplicate in-flight icon search/fetch work.
+- Upgrade persisted and exported settings to canonical schema v3: `docks` is the single stored Dock source of truth, while selected-Dock compatibility fields are non-enumerable live accessors rather than duplicated runtime state.
+- Keep raw legacy settings plus schema-v1 and schema-v2 backups import-compatible, and automatically rewrite older plugin data into canonical schema v3 on load.
+- Harden CI and release validation so `dev`, `prerelease`, and `stable` run the same checks and release tagging validates an immutable source commit instead of modifying source during publication.
+- Add regression coverage for runtime ownership, shared workspace traversal, disabled-Dock lifecycle, incremental DOM reconstruction, target caching, persistence ordering, path maintenance, and schema-v3 migration.
+
 ## 2.2.2
 
 - Render each corner trigger as one unified L-shaped surface so gradient, opacity, and hover treatment stay continuous through the 90-degree joint.
