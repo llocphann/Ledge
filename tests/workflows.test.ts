@@ -14,9 +14,20 @@ void test("GitHub workflows are valid YAML", () => {
   }
 });
 
+void test("prerelease and stable CI certify metadata and the tracked bundle", () => {
+  const workflow = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+
+  assert.match(workflow, /refs\/heads\/prerelease/);
+  assert.match(workflow, /refs\/heads\/stable/);
+  assert.match(workflow, /LOCK_ROOT_VERSION/);
+  assert.match(workflow, /VERSIONS_MIN_APP/);
+  assert.match(workflow, /git diff --exit-code -- main\.js/);
+});
+
 void test("release preparation changes only tracked release metadata and build output", () => {
   const workflow = fs.readFileSync(".github/workflows/prepare-release.yml", "utf8");
 
+  assert.match(workflow, /timeout-minutes: 15/);
   assert.match(workflow, /npm version "\$VERSION" --no-git-tag-version --ignore-scripts/);
   assert.match(workflow, /node version-bump\.mjs/);
   assert.match(workflow, /npm run check/);
