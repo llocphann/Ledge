@@ -31,7 +31,7 @@ void test("explicit flushes serialize behind a write already in flight", async (
 
   const first = store.flush(1);
   const second = store.flush(2);
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
 
   assert.deepEqual(events, ["start:1"]);
   releaseFirst();
