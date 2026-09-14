@@ -1,6 +1,6 @@
 # Ledge roadmap
 
-This roadmap tracks the work after the multi-Dock preset foundation. It is organized by dependency rather than by a promised calendar date.
+This roadmap tracks work after the multi-Dock foundation. It is organized by dependency rather than by a promised calendar date.
 
 ## Current foundation
 
@@ -9,11 +9,17 @@ This roadmap tracks the work after the multi-Dock preset foundation. It is organ
 - Multiple enabled Docks render simultaneously and resolve their own items, visibility rules, trigger, appearance, and layout settings.
 - Add, duplicate, rename, select, enable or disable, and delete preset controls.
 - Automatic migration of the previous single-Dock configuration into `Dock 1`.
-- Schema-v2 settings backup for all presets, with schema-v1 single-Dock imports still supported.
+- Canonical schema-v3 plugin data and backups, with raw legacy, schema-v1, and schema-v2 imports still supported.
 - Separate appearance controls for each Dock, activation hitbox, and trigger pill.
 - Ordered include and exclude rules inside each Dock using note names, exact paths, folders, or tags.
-- Context refresh on active-file and metadata changes without polling.
+- Shared event-driven runtime coordination for workspace, metadata, window, and vault changes without polling.
+- Shared per-document leaf/content/note context resolution across simultaneous Docks.
+- Incremental Dock rendering split into style, geometry, visibility, item, icon, and position dirty domains.
+- Central path maintenance for renamed targets, visibility rules, and vault icons, including disabled Dock presets.
+- Cached target resolution with relevant vault/metadata invalidation.
+- Serialized and coalesced settings persistence, plus bounded/debounced external-icon search.
 - Per-window rendering, same-leaf navigation, and persistent drag-and-drop ordering.
+- CI architecture gates covering global event ownership, shared workspace traversal, disabled-Dock lifecycle, and incremental DOM reconstruction.
 
 ## Next — Preset management polish
 
@@ -25,7 +31,7 @@ This roadmap tracks the work after the multi-Dock preset foundation. It is organ
 
 ## Context routing extensions
 
-Each Dock already has independent include and exclude rules. Future routing work can build on that foundation without changing the preset schema:
+Each Dock already has independent include and exclude rules. Future routing work can build on that foundation without changing the canonical multi-Dock schema:
 
 - Optional per-item visibility rules inside a Dock.
 - Optional frontmatter-property matching in addition to note, path, folder, and tag matching.
@@ -34,11 +40,13 @@ Each Dock already has independent include and exclude rules. Future routing work
 
 ## Reliability and performance
 
-- Consolidate shared workspace, metadata, and vault event subscriptions if profiling shows meaningful overhead with many simultaneous Docks.
-- Avoid redundant DOM rebuilds when a preset's resolved configuration has not changed.
-- Expand automated coverage for multi-window rendering, deleted presets, renamed folders, disabled presets, and imported malformed configurations.
-- Add recovery for a synced configuration that references an invalid selected preset or partially written preset list.
-- Keep release data forward-compatible so newer settings do not corrupt older installed versions.
+The 2.3 runtime hardening removed the largest known scaling costs. Remaining work is focused on measurement, recovery, and edge-case coverage rather than another architecture rewrite:
+
+- Add end-to-end automated multi-window tests once a stable Obsidian runtime harness is practical in CI.
+- Add recovery diagnostics for externally synced or manually edited plugin data with partially written preset lists.
+- Add optional benchmark instrumentation for large synthetic layouts so future changes can compare render counts, target resolutions, leaf traversals, and persistence writes against a stable baseline.
+- Continue replacing implementation-shape tests with behavioral tests where the Obsidian API can be isolated reliably.
+- Keep persisted data forward-compatible so future schemas fail safely instead of corrupting older installed versions.
 
 ## Later candidates
 
