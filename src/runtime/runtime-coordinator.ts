@@ -1,6 +1,7 @@
 import { Component, TFile, type App } from "obsidian";
 import { maintainRenamedVaultPaths } from "../services/path-maintenance";
 import type { LedgeSettings } from "../types";
+import { DocumentRegistry } from "./document-registry";
 
 export interface CoordinatedDockRuntime {
   refreshWorkspaceState(): void;
@@ -13,6 +14,7 @@ export interface CoordinatedDockRuntime {
 
 export interface RuntimeCoordinatorHost {
   app: App;
+  documentRegistry: DocumentRegistry;
   getSettings(): LedgeSettings;
   dockRuntimes(): Iterable<readonly [string, CoordinatedDockRuntime]>;
   persistRuntimeSettings(): Promise<void>;
@@ -34,12 +36,15 @@ export class RuntimeCoordinator extends Component {
     this.registerEvent(workspace.on("active-leaf-change", () => this.refreshWorkspaceState()));
     this.registerEvent(workspace.on("file-open", () => this.refreshWorkspaceState()));
     this.registerEvent(this.host.app.metadataCache.on("changed", (file) => {
+      this.host.documentRegistry.invalidateFile(file);
       for (const [, dock] of this.host.dockRuntimes()) dock.handleMetadataChange(file);
     }));
     this.registerEvent(workspace.on("window-open", (_workspaceWindow, openedWindow) => {
+      this.host.documentRegistry.invalidateWorkspace();
       for (const [, dock] of this.host.dockRuntimes()) dock.handleWindowOpen(openedWindow.document);
     }));
     this.registerEvent(workspace.on("window-close", (_workspaceWindow, closedWindow) => {
+      this.host.documentRegistry.invalidateWorkspace();
       for (const [, dock] of this.host.dockRuntimes()) dock.handleWindowClose(closedWindow.document);
     }));
     this.registerEvent(this.host.app.vault.on("create", (file) => {
@@ -57,6 +62,7 @@ export class RuntimeCoordinator extends Component {
   }
 
   private refreshWorkspaceState(): void {
+    this.host.documentRegistry.invalidateWorkspace();
     for (const [, dock] of this.host.dockRuntimes()) dock.refreshWorkspaceState();
   }
 
@@ -65,6 +71,7 @@ export class RuntimeCoordinator extends Component {
   }
 
   private handleVaultRename(newPath: string, oldPath: string): void {
+    this.host.documentRegistry.invalidateWorkspace();
     const result = maintainRenamedVaultPaths(this.host.getSettings(), newPath, oldPath);
     const affected = new Set(result.affectedDockIds);
 
