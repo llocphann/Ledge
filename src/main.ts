@@ -7,7 +7,6 @@ import {
   syncIconifyCache,
 } from "./icon-provider";
 import { MultiDockController } from "./multi-dock";
-import { maintainRenamedVaultPaths } from "./services/path-maintenance";
 import {
   addDockPreset,
   applyDockPreset,
@@ -35,17 +34,6 @@ export default class LedgePlugin extends Plugin {
     this.settings = normalizeSettings(storedSettings);
     if (shouldPersistMigration) await this.savePersistedData();
     this.addSettingTab(new LedgeIconLibrarySettingTab(this.app, this));
-
-    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
-      const result = maintainRenamedVaultPaths(this.settings, file.path, oldPath);
-      if (!result.changed) return;
-      if (result.affectedDockIds.includes(this.settings.selectedDockId)) {
-        applyDockPreset(this.settings, this.settings.selectedDockId);
-      }
-      void this.persistRuntimeSettings().catch((error: unknown) => {
-        console.error("[Ledge] Could not persist renamed Dock paths", error);
-      });
-    }));
 
     void this.syncExternalIcons(true).catch((error: unknown) => {
       console.error("[Ledge] Could not synchronize external icons", error);
