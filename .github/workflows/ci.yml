@@ -19,3 +19,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: Validate release-candidate metadata
+        if: github.ref == 'refs/heads/prerelease' || github.ref == 'refs/heads/stable'
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./manifest.json').version")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          LOCK_VERSION="$(node -p "require('./package-lock.json').version")"
+          LOCK_ROOT_VERSION="$(node -p "require('./package-lock.json').packages?.['']?.version")"
+          MIN_APP_VERSION="$(node -p "require('./manifest.json').minAppVersion")"
+          VERSIONS_MIN_APP="$(node -p "require('./versions.json')[require('./manifest.json').version]")"
+
+          test "$VERSION" = "$PACKAGE_VERSION"
+          test "$VERSION" = "$LOCK_VERSION"
+          test "$VERSION" = "$LOCK_ROOT_VERSION"
+          test "$MIN_APP_VERSION" = "$VERSIONS_MIN_APP"
+      - name: Verify tracked release-candidate bundle
+        if: github.ref == 'refs/heads/prerelease' || github.ref == 'refs/heads/stable'
+        run: git diff --exit-code -- main.js
