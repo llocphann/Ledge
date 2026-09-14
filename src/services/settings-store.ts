@@ -1,6 +1,8 @@
+export type SettingsTimerHandle = number | object;
+
 export interface SettingsTimerHost {
-  setTimeout(callback: () => void, delay: number): unknown;
-  clearTimeout(handle: unknown): void;
+  setTimeout(callback: () => void, delay: number): SettingsTimerHandle;
+  clearTimeout(handle: SettingsTimerHandle): void;
 }
 
 export interface SettingsStoreOptions {
@@ -22,7 +24,7 @@ export class SettingsStore<T> {
   private readonly coalesceMs: number;
   private readonly timerHost: SettingsTimerHost;
   private pendingValue: T | undefined;
-  private timer: unknown | null = null;
+  private timer: SettingsTimerHandle | null = null;
   private waiters: Waiter[] = [];
   private writeChain: Promise<void> = Promise.resolve();
 
